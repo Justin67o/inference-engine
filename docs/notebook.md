@@ -14,7 +14,7 @@
 | PyTorch | 2.14.1+cu126 |
 | CUDA (PyTorch build) | 12.6 |
 
-**What I did:** Installed WSL2 and Ubuntu, set up VS Code, Git and the Python environment, installed PyTorch with CUDA 12.6.
+**What I did:** Installed WSL2 and Ubuntu, set up VS Code, Git and the Python environment, installed PyTorch with CUDA 12.6, set up basic CI and testing, add README
 
 **Problems and fixes:** N/A
 
