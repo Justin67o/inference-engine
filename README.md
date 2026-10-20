@@ -1,9 +1,5 @@
 # inference-engine
 
-# inference-engine
-
-![CI](https://github.com/<your-username>/inference-engine/actions/workflows/ci.yml/badge.svg)
-
 A single-GPU LLM inference engine built from scratch in PyTorch, with continuous batching, a paged KV cache and speculative decoding, benchmarked against Hugging Face Transformers and vLLM.
 
 > **Status: in progress.** The engine is being built in stages (M0 to M5 below). Every stage is tested for correctness against Hugging Face and benchmarked before the next one starts. Results will appear here as each milestone lands.
