@@ -18,3 +18,8 @@
 
 **Problems and fixes:** N/A
 
+## 2026-10-21 — 
+
+GPU Measurements
+- bandwidth ≈ 156 GB/s
+- compute ≈ 16.3 TFLOP/s
