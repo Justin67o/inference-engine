@@ -23,9 +23,13 @@ def gpu_info():
 
     return dict(zip(fields.split(","), line.split(", ")))
 
+# Benchmark outputs, not inputs: writing them must not mark later runs dirty.
+DIRTY_IGNORE = ["results"]
+
 def git_info():
     commit = _run(["git", "rev-parse", "HEAD"])
-    status = _run(["git", "status", "--porcelain"])
+    excludes = [f":!{p}" for p in DIRTY_IGNORE]
+    status = _run(["git", "status", "--porcelain", "--", ".", *excludes])
 
     return {
         "commit": commit,
