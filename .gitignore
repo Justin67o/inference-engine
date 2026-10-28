@@ -6,3 +6,7 @@ __pycache__/
 *.pt
 trace*.json
 .env
+
+# Personal notes, kept local
+docs/notebook.md
+build_guide.md
