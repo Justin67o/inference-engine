@@ -1,6 +1,7 @@
-from transformers import AutoTokenizer
-import re
 import json
+import re
+
+from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", model_max_length=10**9)
 
