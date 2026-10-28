@@ -3,6 +3,7 @@ import random
 import time
 import json
 import httpx
+from bench.metrics import summarize
 
 async def one_request(client, url, prompt, max_tokens, results):
     sent, token_times = time.perf_counter(), []
@@ -65,13 +66,17 @@ def main():
     if args.warmup > 0:
         warm_prompts = [all_prompts[i % len(all_prompts)] for i in range(args.warmup)]
         asyncio.run(run(args.url, warm_prompts, 100.0, args.max_tokens))
-        print(f"warm-up: {args.warmup} requests sent")
+        print(f"warm-up: {args.warmup} done")
     random.seed(args.seed)
 
     results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens))
+    metrics = summarize(results)
 
     with open(args.output, "w") as f:
-        json.dump({"config": vars(args), "results": results}, f, indent=2)
-  
+        json.dump({"config": vars(args), "metrics": metrics, "results": results}, f, indent=2)
+
+    
+    print(json.dumps(metrics, indent=2))
+
 if __name__ == "__main__":
     main()
