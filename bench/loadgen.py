@@ -1,9 +1,11 @@
 import asyncio, argparse
 import random
+import os
 import time
 import json
 import httpx
 from bench.metrics import summarize
+from bench.env import get_env
 
 async def one_request(client, url, prompt, max_tokens, results):
     sent, token_times = time.perf_counter(), []
@@ -55,8 +57,10 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--warmup", type=int, default=20, help="number of warmup requests to send")
     parser.add_argument("--output", required=True, help="output file to write results to")
+    parser.add_argument("--label", default="", help="what is being measured")
     args = parser.parse_args()
-    
+
+    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
 
     with open(args.prompts, encoding="utf-8") as f:
         all_prompts = [json.loads(line)["prompt"] for line in f]
@@ -70,10 +74,11 @@ def main():
     random.seed(args.seed)
 
     results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens))
+    env = get_env() # right after the run, so GPU state is still under load
     metrics = summarize(results)
 
     with open(args.output, "w") as f:
-        json.dump({"config": vars(args), "metrics": metrics, "results": results}, f, indent=2)
+        json.dump({"config": vars(args), "metrics": metrics, "env": env, "results": results}, f, indent=2)
 
     
     print(json.dumps(metrics, indent=2))
