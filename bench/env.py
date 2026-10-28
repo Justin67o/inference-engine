@@ -24,7 +24,7 @@ def gpu_info():
     return dict(zip(fields.split(","), line.split(", ")))
 
 # Benchmark outputs, not inputs: writing them must not mark later runs dirty.
-DIRTY_IGNORE = ["results"]
+DIRTY_IGNORE = ["results", "docs/figures"]
 
 def git_info():
     commit = _run(["git", "rev-parse", "HEAD"])
