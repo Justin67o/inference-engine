@@ -1,3 +1,5 @@
+import gc
+
 import pytest
 import torch
 
@@ -12,17 +14,32 @@ def tok():
 
 
 @pytest.fixture(scope="session")
-def fp32_models():
-    """(ref, mine) in fp32 on the GPU, loaded once for the whole test run."""
+def models():
+    """Returns load(dtype) -> (ref, mine), both on the GPU.
+    
+    Only one dtype is kept loaded: loading a pair peaks at ~3.5 GB of RAM,
+    so the previous pair is freed before the next one loads."""
+
     if not torch.cuda.is_available():
         pytest.skip("needs a CUDA GPU")
+
     from transformers import AutoModelForCausalLM
 
     from engine.model.loader import load_model
 
-    # Eager attenion: HF's default (SDPA) orders its operations differently
-    ref = AutoModelForCausalLM.from_pretrained(
-        MODEL, dtype=torch.float32, attn_implementation="eager").cuda().eval()
+    loaded = {}
 
-    mine, _ = load_model(MODEL, dtype=torch.float32)
-    return ref, mine
+    def load(dtype):
+        if dtype not in loaded:
+            loaded.clear() # free the other dtype's pair before loading this one
+            gc.collect()
+            torch.cuda.empty_cache()
+
+            # Eager attention: HF's default (SDPA) orders its operations differently
+            ref = AutoModelForCausalLM.from_pretrained(
+                MODEL, dtype=dtype, attn_implementation="eager").cuda().eval()
+            mine, _ = load_model(MODEL, dtype=dtype)
+            loaded[dtype] = (ref, mine)
+
+        return loaded[dtype]
+    return load
