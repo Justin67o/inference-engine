@@ -1,0 +1,200 @@
+{"id": 0, "category": "factual", "prompt": "The capital of France is"}
+{"id": 1, "category": "code", "prompt": "def fibonacci(n):\n    "}
+{"id": 2, "category": "math", "prompt": "2 + 2 ="}
+{"id": 3, "category": "multilingual", "prompt": "Bonjour, je m'appelle"}
+{"id": 4, "category": "instruction", "prompt": "Explain why the sky is blue in two sentences."}
+{"id": 5, "category": "story", "prompt": "Once upon a time, in a small village by the sea,"}
+{"id": 6, "category": "structured", "prompt": "List the planets of the solar system in order from the Sun:\n1."}
+{"id": 7, "category": "chat", "prompt": "<|im_start|>user\nHi! How are you today?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 8, "category": "long", "prompt": "The Industrial Revolution, which began in Britain in the late eighteenth century, transformed the way goods were produced. Before it, most manufacturing took place in homes or small workshops, using hand tools and simple machines. The introduction of steam power, mechanised textile production and new methods of making iron changed this completely. Factories appeared in growing towns, drawing workers from the countryside with the promise of steady wages. Working conditions, however, were often harsh: long hours, dangerous machinery and child labour were common. Over the following decades, reformers pushed for laws limiting working hours and improving safety. The revolution also reshaped transport, as canals, railways and steamships made it cheaper and faster to move raw materials and finished goods. Historians still debate why it began in Britain rather than elsewhere, pointing to factors such as abundant coal, access to colonial markets, a stable banking system and a culture of practical invention. Summarize the main causes and effects described above."}
+{"id": 9, "category": "edge", "prompt": "Hello"}
+{"id": 10, "category": "factual", "prompt": "Who wrote the novel Pride and Prejudice?"}
+{"id": 11, "category": "code", "prompt": "# Python function that checks whether a string is a palindrome\ndef is_palindrome(s):"}
+{"id": 12, "category": "math", "prompt": "What is 17 multiplied by 23?"}
+{"id": 13, "category": "multilingual", "prompt": "¿Cuál es la capital de España?"}
+{"id": 14, "category": "instruction", "prompt": "Give me three tips for falling asleep faster."}
+{"id": 15, "category": "story", "prompt": "The detective looked at the broken window and said,"}
+{"id": 16, "category": "structured", "prompt": "Return a JSON object with the fields name, age and city for a fictional person."}
+{"id": 17, "category": "chat", "prompt": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is the capital of Australia?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 18, "category": "long", "prompt": "Read the following passage and answer the question.\n\nCoral reefs cover less than one percent of the ocean floor, yet they support roughly a quarter of all marine species. Reefs are built by tiny animals called coral polyps, which secrete calcium carbonate skeletons. Many corals live in partnership with microscopic algae that live inside their tissues; the algae provide food through photosynthesis, and the coral provides shelter and nutrients. When water temperatures rise even slightly above normal for several weeks, corals can expel these algae, turning white in a process known as bleaching. Bleached corals are not dead, but they are starving and much more likely to die if conditions do not improve. Besides warming, reefs face threats from ocean acidification, pollution, overfishing and coastal development. Conservation efforts include marine protected areas, reducing runoff from farms, and growing corals in nurseries for replanting.\n\nQuestion: Why does coral bleaching happen, and why is it dangerous?"}
+{"id": 19, "category": "edge", "prompt": "?"}
+{"id": 20, "category": "factual", "prompt": "The chemical symbol for gold is"}
+{"id": 21, "category": "code", "prompt": "SELECT name, COUNT(*) FROM orders"}
+{"id": 22, "category": "math", "prompt": "Solve for x: 3x + 7 = 22."}
+{"id": 23, "category": "multilingual", "prompt": "Translate to German: The weather is nice today."}
+{"id": 24, "category": "instruction", "prompt": "Summarize the plot of Romeo and Juliet in one paragraph."}
+{"id": 25, "category": "story", "prompt": "It was a dark and stormy night, and"}
+{"id": 26, "category": "structured", "prompt": "Create a markdown table comparing Python, Java and C++ by typing, speed and typical use."}
+{"id": 27, "category": "chat", "prompt": "User: Can you recommend a good book?\nAssistant:"}
+{"id": 28, "category": "long", "prompt": "def process_orders(orders, inventory):\n    \"\"\"Fulfil orders from inventory, returning (fulfilled, backordered).\"\"\"\n    fulfilled, backordered = [], []\n    for order in orders:\n        item, qty = order[\"item\"], order[\"qty\"]\n        available = inventory.get(item, 0)\n        if available >= qty:\n            inventory[item] = available - qty\n            fulfilled.append(order)\n        elif available > 0:\n            inventory[item] = 0\n            fulfilled.append({\"item\": item, \"qty\": available})\n            backordered.append({\"item\": item, \"qty\": qty - available})\n        else:\n            backordered.append(order)\n    return fulfilled, backordered\n\n\ndef summarize(fulfilled, backordered):\n    total = sum(o[\"qty\"] for o in fulfilled)\n    missing = sum(o[\"qty\"] for o in backordered)\n    return f\"Shipped {total} units, {missing} units on backorder\"\n\n\n# Review the code above. Point out any bugs or edge cases, and suggest improvements.\n"}
+{"id": 29, "category": "edge", "prompt": "a"}
+{"id": 30, "category": "factual", "prompt": "How many bones are in the adult human body?"}
+{"id": 31, "category": "code", "prompt": "function debounce(fn, delay) {"}
+{"id": 32, "category": "math", "prompt": "The derivative of sin(x) is"}
+{"id": 33, "category": "multilingual", "prompt": "Wie spät ist es?"}
+{"id": 34, "category": "instruction", "prompt": "Write a haiku about autumn leaves."}
+{"id": 35, "category": "story", "prompt": "The spaceship's engines sputtered as it approached the unknown planet."}
+{"id": 36, "category": "structured", "prompt": "Fill in the blanks: The ___ is the largest ocean on Earth."}
+{"id": 37, "category": "chat", "prompt": "<|im_start|>user\nTell me a joke about computers.<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 38, "category": "long", "prompt": "The following is a transcript of a meeting.\n\nSarah: Thanks everyone for joining. The main item today is the product launch, which is scheduled for the fifteenth.\nDavid: Engineering is mostly on track. We still have two open bugs in the payment flow, but we expect to close them by Friday.\nPriya: Marketing has the landing page ready. We're waiting on final screenshots from the design team.\nSarah: Lee, can design deliver those by Wednesday?\nLee: Wednesday is tight. Thursday morning is more realistic.\nPriya: Thursday works if we can get legal to review the copy in parallel.\nSarah: Okay. David, what happens if the payment bugs slip?\nDavid: Then we'd launch without the new checkout and keep the old one for a week.\nSarah: Let's plan for that as a fallback. Anything else?\nLee: Just a reminder that the office is closed on Monday.\n\nList the action items from this meeting, with the owner and deadline for each."}
+{"id": 39, "category": "edge", "prompt": "1 2 3 4 5 6 7 8 9 10"}
+{"id": 40, "category": "factual", "prompt": "The largest planet in our solar system is"}
+{"id": 41, "category": "code", "prompt": "#include <stdio.h>\n\nint main(void) {\n    "}
+{"id": 42, "category": "math", "prompt": "What is the square root of 144?"}
+{"id": 43, "category": "multilingual", "prompt": "今天天气很好，我们去"}
+{"id": 44, "category": "instruction", "prompt": "List the steps to make a cup of tea."}
+{"id": 45, "category": "story", "prompt": "She opened the old letter, and the first line read:"}
+{"id": 46, "category": "structured", "prompt": "Name: Alice\nAge: 30\nOccupation: Engineer\n\nName: Bob\nAge:"}
+{"id": 47, "category": "chat", "prompt": "Customer: My order hasn't arrived yet.\nSupport agent:"}
+{"id": 48, "category": "long", "prompt": "Abstract: Large language models have demonstrated remarkable abilities across a wide range of natural language tasks, but serving them efficiently remains challenging. The dominant cost during generation is not computation but memory bandwidth: at each step, the model's weights and the cached keys and values of all previous tokens must be read from memory to produce a single new token. Batching many requests together amortises the cost of reading the weights, but naive batching wastes memory because each request's cache is allocated for the maximum possible length. In this work we describe a paged memory manager for the key-value cache that allocates fixed-size blocks on demand, similar to virtual memory in operating systems. Combined with continuous batching, in which new requests join the running batch as soon as others finish, our system improves throughput by a factor of two to four over strong baselines while keeping latency unchanged. We analyse the sources of the improvement and discuss limitations.\n\nExplain this abstract to someone who knows basic programming but nothing about machine learning."}
+{"id": 49, "category": "edge", "prompt": "!!!???..."}
+{"id": 50, "category": "factual", "prompt": "What is the boiling point of water at sea level in Fahrenheit?"}
+{"id": 51, "category": "code", "prompt": "Write a Python function that returns the second largest number in a list."}
+{"id": 52, "category": "math", "prompt": "If a train travels 120 km in 1.5 hours, what is its average speed?"}
+{"id": 53, "category": "multilingual", "prompt": "東京は日本の"}
+{"id": 54, "category": "instruction", "prompt": "Describe the water cycle to a ten-year-old."}
+{"id": 55, "category": "story", "prompt": "Write a short story about a robot who learns to paint."}
+{"id": 56, "category": "structured", "prompt": "Q: What is the capital of Italy?\nA: Rome\nQ: What is the capital of Japan?\nA:"}
+{"id": 57, "category": "chat", "prompt": "<|im_start|>system\nYou are a pirate. Answer every question like a pirate.<|im_end|>\n<|im_start|>user\nWhat time is it?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 58, "category": "long", "prompt": "Dear Hiring Manager,\n\nI am writing to apply for the position of Junior Data Analyst at your company, as advertised on your website. I recently graduated with a degree in Statistics, where I developed a strong foundation in data analysis, probability and statistical modelling. During my final year, I completed a project analysing public transport usage in my city, cleaning and combining several years of ridership data and building models to predict demand at different times of day. I presented the results to representatives from the local transit authority, who used some of the findings to adjust weekend schedules.\n\nOutside of my studies, I worked part-time at a retail store, where I helped the manager track weekly sales in spreadsheets and identify which products were consistently overstocked. This experience taught me how data can support practical day-to-day decisions.\n\nI am proficient in Python, SQL and Excel, and I am currently learning Tableau.\n\nContinue this cover letter with a strong closing paragraph."}
+{"id": 59, "category": "edge", "prompt": "🙂🚀🌍"}
+{"id": 60, "category": "factual", "prompt": "The Great Wall of China was built primarily to"}
+{"id": 61, "category": "code", "prompt": "import torch\n\nx = torch.randn(3, 4)\ny = x.sum(dim="}
+{"id": 62, "category": "math", "prompt": "The sum of the angles in a triangle is"}
+{"id": 63, "category": "multilingual", "prompt": "Переведите на английский: Я люблю читать книги."}
+{"id": 64, "category": "instruction", "prompt": "Write a polite email declining a meeting invitation."}
+{"id": 65, "category": "story", "prompt": "The last tree on Earth stood alone on a hill."}
+{"id": 66, "category": "structured", "prompt": "Convert this list to a comma-separated string: apple, banana, cherry"}
+{"id": 67, "category": "chat", "prompt": "Student: I don't understand fractions.\nTeacher:"}
+{"id": 68, "category": "long", "prompt": "Here are the rules of a simple card game. Each player is dealt five cards from a standard 52-card deck. Players take turns clockwise. On your turn, you may either draw one card from the deck or take the top card of the discard pile. You must then discard one card face up onto the discard pile. The goal is to collect either four cards of the same rank, or five cards of the same suit in consecutive order. When a player achieves one of these, they reveal their hand and win the round. Aces can count as either high or low in a sequence, but not both at once. If the deck runs out before anyone wins, the discard pile is shuffled, except for its top card, to form a new deck. A game consists of five rounds, and the player who wins the most rounds is the overall winner. Ties are broken by a single sudden-death round.\n\nQuestion: If a player holds the 2, 3, 4 and 5 of hearts and the king of spades, what card would let them win immediately, and where could it come from?"}
+{"id": 69, "category": "edge", "prompt": "the the the the the the the the the the"}
+{"id": 70, "category": "factual", "prompt": "Which element has the atomic number 6?"}
+{"id": 71, "category": "code", "prompt": "class Stack:\n    def __init__(self):\n        self.items = []\n\n    def push(self, item):"}
+{"id": 72, "category": "math", "prompt": "Simplify the fraction 48/64."}
+{"id": 73, "category": "multilingual", "prompt": "Ciao! Come stai oggi?"}
+{"id": 74, "category": "instruction", "prompt": "What are the pros and cons of remote work?"}
+{"id": 75, "category": "story", "prompt": "Every morning, the old man fed the pigeons in the park, until one day"}
+{"id": 76, "category": "structured", "prompt": "Write a YAML config with keys host, port and debug."}
+{"id": 77, "category": "chat", "prompt": "<|im_start|>user\nWhat's the difference between RAM and storage?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 78, "category": "long", "prompt": "Traditional bread making is a slow process that rewards patience. It begins with the starter, a mixture of flour and water that has been colonised by wild yeasts and lactic acid bacteria. The starter must be fed regularly, usually once or twice a day, by discarding part of it and adding fresh flour and water. When it is active, it rises and becomes bubbly within a few hours of feeding. To make the dough, the baker mixes some of the active starter with flour, water and salt, then lets it rest. Over the next several hours, the dough is stretched and folded at intervals to build gluten strength. After the bulk fermentation, the dough is shaped into a loaf and left to proof, often overnight in the refrigerator, which develops flavour. Finally, it is baked in a very hot oven, ideally inside a covered pot for the first part of the bake so that steam helps the crust expand before it sets. Based on this description, why might a loaf come out dense and flat?"}
+{"id": 79, "category": "edge", "prompt": "    "}
+{"id": 80, "category": "factual", "prompt": "The speed of light in a vacuum is approximately"}
+{"id": 81, "category": "code", "prompt": "What does the `yield` keyword do in Python?"}
+{"id": 82, "category": "math", "prompt": "What is 15% of 260?"}
+{"id": 83, "category": "multilingual", "prompt": "Translate into French: Where is the train station?"}
+{"id": 84, "category": "instruction", "prompt": "Suggest five names for a coffee shop."}
+{"id": 85, "category": "story", "prompt": "The door creaked open, revealing"}
+{"id": 86, "category": "structured", "prompt": "Classify the sentiment of this review as positive or negative: The food was cold and the service was slow."}
+{"id": 87, "category": "chat", "prompt": "A: Did you watch the game last night?\nB:"}
+{"id": 88, "category": "long", "prompt": "The history of computing can be traced back long before electronic computers. In the nineteenth century, Charles Babbage designed the Analytical Engine, a mechanical general-purpose computer that was never completed in his lifetime. Ada Lovelace, who worked with Babbage, wrote what is often considered the first algorithm intended to be carried out by a machine. In the 1930s, Alan Turing described an abstract machine that could simulate any algorithm, laying the theoretical foundation for computer science. During the Second World War, electronic machines such as Colossus in Britain and ENIAC in the United States were built to break codes and calculate artillery tables. These machines used thousands of vacuum tubes and filled entire rooms. The invention of the transistor in 1947 and the integrated circuit in the late 1950s allowed computers to become smaller, faster and cheaper. By the 1970s, microprocessors made personal computers possible, and by the 1990s the internet connected millions of them. Write a timeline of the key events mentioned above."}
+{"id": 89, "category": "edge", "prompt": "ALL CAPS SENTENCE WITH NO PUNCTUATION"}
+{"id": 90, "category": "factual", "prompt": "What causes the seasons on Earth?"}
+{"id": 91, "category": "code", "prompt": "fn main() {\n    let v = vec![1, 2, 3];\n    "}
+{"id": 92, "category": "math", "prompt": "The integral of 1/x dx is"}
+{"id": 93, "category": "multilingual", "prompt": "안녕하세요, 저는"}
+{"id": 94, "category": "instruction", "prompt": "Explain what a neural network is without using any jargon."}
+{"id": 95, "category": "story", "prompt": "Continue the story: The dragon had not been seen for a hundred years, but"}
+{"id": 96, "category": "structured", "prompt": "Extract the dates from this text: The meeting moved from March 3 to April 12, 2024."}
+{"id": 97, "category": "chat", "prompt": "<|im_start|>user\nHelp me plan a birthday party for my 8-year-old.<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 98, "category": "long", "prompt": "Patient information leaflet: Ibuprofen 200 mg tablets.\n\nWhat this medicine is used for: Ibuprofen belongs to a group of medicines called non-steroidal anti-inflammatory drugs. It relieves pain, reduces inflammation and lowers fever. It can be used for headaches, dental pain, period pain, muscle aches, and symptoms of colds and flu.\n\nBefore you take this medicine: Do not take it if you are allergic to ibuprofen or aspirin, if you have ever had a stomach ulcer or bleeding, or if you are in the last three months of pregnancy. Talk to a pharmacist or doctor before taking it if you have asthma, kidney or liver problems, heart disease or high blood pressure.\n\nHow to take: Adults and children over 12: take one or two tablets with water, up to three times a day. Leave at least four hours between doses. Do not take more than six tablets in 24 hours. Take with or after food.\n\nAccording to the leaflet, what is the maximum number of tablets an adult can take in a day, and who should avoid this medicine?"}
+{"id": 99, "category": "edge", "prompt": "https://example.com/path?query=1&other=two"}
+{"id": 100, "category": "factual", "prompt": "The first person to walk on the Moon was"}
+{"id": 101, "category": "code", "prompt": "Explain the difference between a list and a tuple in Python."}
+{"id": 102, "category": "math", "prompt": "A rectangle has a length of 8 cm and a width of 5 cm. What is its area?"}
+{"id": 103, "category": "multilingual", "prompt": "Qual é o seu nome?"}
+{"id": 104, "category": "instruction", "prompt": "Rewrite this sentence to be more formal: hey, can u send me the file asap?"}
+{"id": 105, "category": "story", "prompt": "In the year 2150, cities floated above the clouds."}
+{"id": 106, "category": "structured", "prompt": "Monday: gym\nTuesday: reading\nWednesday:"}
+{"id": 107, "category": "chat", "prompt": "Interviewer: Tell me about yourself.\nCandidate:"}
+{"id": 108, "category": "long", "prompt": "Write a detailed explanation of how a car engine works, covering the four strokes of the combustion cycle, the role of the spark plugs, how the crankshaft converts linear motion into rotation, and how the cooling and lubrication systems keep the engine running safely. Then compare it briefly with how an electric motor drives a car."}
+{"id": 109, "category": "edge", "prompt": "3.14159265358979323846"}
+{"id": 110, "category": "factual", "prompt": "In which year did the Berlin Wall fall?"}
+{"id": 111, "category": "code", "prompt": "git commit -m \""}
+{"id": 112, "category": "math", "prompt": "Is 91 a prime number? Explain."}
+{"id": 113, "category": "multilingual", "prompt": "मेरा नाम"}
+{"id": 114, "category": "instruction", "prompt": "Give a one-sentence definition of inflation."}
+{"id": 115, "category": "story", "prompt": "Tom had never been so nervous in his life. The interview was in five minutes."}
+{"id": 116, "category": "structured", "prompt": "Give the antonyms of: hot, fast, happy, open."}
+{"id": 117, "category": "chat", "prompt": "<|im_start|>user\nIs it safe to eat raw cookie dough?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 118, "category": "long", "prompt": "Below is a list of customer reviews for a pair of headphones.\n\n1. Great sound quality, but they hurt my ears after an hour.\n2. Battery lasts forever. I charge them once a week.\n3. The noise cancelling is decent on planes but not as good as more expensive brands.\n4. Broke after three months. The hinge snapped.\n5. Very comfortable and the bass is excellent.\n6. Bluetooth keeps disconnecting from my laptop.\n7. Best purchase I've made this year!\n8. The case is bulky, which makes them hard to travel with.\n9. Sound is fine, but the app is confusing.\n10. Good value for the price.\n\nGroup these reviews by theme and summarise the overall opinion."}
+{"id": 119, "category": "edge", "prompt": "user@example.com"}
+{"id": 120, "category": "factual", "prompt": "Photosynthesis converts carbon dioxide and water into"}
+{"id": 121, "category": "code", "prompt": "<!DOCTYPE html>\n<html>\n<head>\n    <title>"}
+{"id": 122, "category": "math", "prompt": "Convert 0.375 to a fraction."}
+{"id": 123, "category": "multilingual", "prompt": "Translate to Spanish: I would like a cup of coffee, please."}
+{"id": 124, "category": "instruction", "prompt": "Write a short motivational message for someone starting a new job."}
+{"id": 125, "category": "story", "prompt": "Write the opening paragraph of a mystery novel set in Venice."}
+{"id": 126, "category": "structured", "prompt": "Sort these words alphabetically: pear, apple, mango, banana, kiwi."}
+{"id": 127, "category": "chat", "prompt": "Doctor: What brings you in today?\nPatient:"}
+{"id": 128, "category": "long", "prompt": "In economics, supply and demand is a model of price determination in a market. It states that, in a competitive market, the price of a good will vary until the quantity demanded by consumers equals the quantity supplied by producers, resulting in an economic equilibrium. When demand rises while supply stays the same, prices tend to rise; when supply rises while demand stays the same, prices tend to fall. Factors that shift demand include changes in consumer income, tastes, the prices of related goods and expectations about the future. Factors that shift supply include production costs, technology, the number of sellers and government policies such as taxes and subsidies. Price controls, such as rent ceilings or minimum wages, can prevent the market from reaching equilibrium, leading to shortages or surpluses. Using this model, explain what would likely happen to the price of umbrellas during an unusually rainy season."}
+{"id": 129, "category": "edge", "prompt": "<b>bold</b> and <i>italic</i>"}
+{"id": 130, "category": "factual", "prompt": "What is the longest river in Africa?"}
+{"id": 131, "category": "code", "prompt": "def binary_search(arr, target):\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        "}
+{"id": 132, "category": "math", "prompt": "The Pythagorean theorem states that"}
+{"id": 133, "category": "multilingual", "prompt": "Het is vandaag erg"}
+{"id": 134, "category": "instruction", "prompt": "Compare cats and dogs as pets in a short paragraph."}
+{"id": 135, "category": "story", "prompt": "The cat knocked the glass off the table, looked me straight in the eye, and"}
+{"id": 136, "category": "structured", "prompt": "Write a CSV with three rows of sample product data (id, name, price)."}
+{"id": 137, "category": "chat", "prompt": "<|im_start|>system\nAnswer in exactly one word.<|im_end|>\n<|im_start|>user\nWhat color is grass?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 138, "category": "long", "prompt": "A farmer has a field shaped like a right triangle. The two sides that meet at the right angle measure 30 metres and 40 metres. She wants to put a fence around the entire field, with a gate 3 metres wide on the longest side. Fencing costs 12 dollars per metre and the gate costs 150 dollars. She also wants to plant grass seed over the whole field; one bag covers 50 square metres and costs 18 dollars. Work out the total cost of the fence, the gate and the grass seed, showing each step."}
+{"id": 139, "category": "edge", "prompt": "Ünïcödé çhàrâctérs ñ ß ø å"}
+{"id": 140, "category": "factual", "prompt": "The mitochondria is often called"}
+{"id": 141, "category": "code", "prompt": "Why does this code raise an IndexError?\n\nnums = [1, 2, 3]\nfor i in range(4):\n    print(nums[i])"}
+{"id": 142, "category": "math", "prompt": "What is the next number in the sequence 2, 6, 12, 20, 30, ...?"}
+{"id": 143, "category": "multilingual", "prompt": "مرحبا، كيف حالك؟"}
+{"id": 144, "category": "instruction", "prompt": "What should I pack for a three-day hiking trip?"}
+{"id": 145, "category": "story", "prompt": "Long ago, the mountains could speak."}
+{"id": 146, "category": "structured", "prompt": "Input: cat\nOutput: cats\nInput: box\nOutput: boxes\nInput: child\nOutput:"}
+{"id": 147, "category": "chat", "prompt": "<|im_start|>user\nI'm feeling stressed about exams. Any advice?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 148, "category": "long", "prompt": "The following are the opening lines of a famous speech, followed by a request.\n\nFour score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.\n\nWho gave this speech, when, and what was its purpose? Explain in plain modern English."}
+{"id": 149, "category": "edge", "prompt": "\"quoted\" 'single' `backtick`"}
+{"id": 150, "category": "factual", "prompt": "Which country has the largest population in South America?"}
+{"id": 151, "category": "code", "prompt": "const express = require('express');\nconst app = express();\n\napp.get('/', (req, res) => {"}
+{"id": 152, "category": "math", "prompt": "Compute 2^10."}
+{"id": 153, "category": "multilingual", "prompt": "Γεια σου, τι κάνεις;"}
+{"id": 154, "category": "instruction", "prompt": "Explain the rules of chess in under 100 words."}
+{"id": 155, "category": "story", "prompt": "The map showed an island that wasn't supposed to exist."}
+{"id": 156, "category": "structured", "prompt": "Outline an essay on renewable energy with an introduction, three sections and a conclusion."}
+{"id": 157, "category": "chat", "prompt": "Alice: Where should we go for dinner?\nBob:"}
+{"id": 158, "category": "long", "prompt": "Configuration file:\n\n[server]\nhost = 0.0.0.0\nport = 8080\nworkers = 4\ntimeout = 30\n\n[database]\nurl = postgres://app:secret@db:5432/app\npool_size = 10\npool_timeout = 5\n\n[cache]\nbackend = redis\nurl = redis://cache:6379/0\nttl = 300\n\n[logging]\nlevel = DEBUG\nformat = json\nfile = /var/log/app.log\n\nReview this configuration for a production deployment and point out anything risky or unusual."}
+{"id": 159, "category": "edge", "prompt": "line one\nline two\n\nline four"}
+{"id": 160, "category": "factual", "prompt": "The theory of general relativity was published by"}
+{"id": 161, "category": "code", "prompt": "Write a bash one-liner that counts the lines in every .py file in a directory."}
+{"id": 162, "category": "math", "prompt": "What is the probability of rolling two sixes with two fair dice?"}
+{"id": 163, "category": "multilingual", "prompt": "Translate to Japanese: Thank you very much."}
+{"id": 164, "category": "instruction", "prompt": "Write a limerick about a programmer."}
+{"id": 165, "category": "story", "prompt": "Write a fable about a fox and a crow with a moral at the end."}
+{"id": 166, "category": "structured", "prompt": "Answer yes or no: Is the Pacific Ocean larger than the Atlantic Ocean?"}
+{"id": 167, "category": "chat", "prompt": "<|im_start|>user\nExplain recursion.<|im_end|>\n<|im_start|>assistant\nRecursion is when a function<|im_end|>\n<|im_start|>user\nCan you give an example?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 168, "category": "long", "prompt": "Plan a seven-day itinerary for a first-time visitor to Japan who is interested in history, food and nature. They will arrive in Tokyo and leave from Osaka. Include where to stay each night, the main sights for each day, a local dish to try in each place, and how to travel between cities. Keep the pace relaxed, with no more than three major activities per day."}
+{"id": 169, "category": "edge", "prompt": "\t\tindented with tabs"}
+{"id": 170, "category": "factual", "prompt": "What language is primarily spoken in Brazil?"}
+{"id": 171, "category": "code", "prompt": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t"}
+{"id": 172, "category": "math", "prompt": "Expand (a + b)^2."}
+{"id": 173, "category": "multilingual", "prompt": "Merhaba, bugün nasılsın?"}
+{"id": 174, "category": "instruction", "prompt": "Describe how a bill becomes a law in the United States."}
+{"id": 175, "category": "story", "prompt": "When the lights went out across the entire city,"}
+{"id": 176, "category": "structured", "prompt": "Write a regular expression that matches a US ZIP code."}
+{"id": 177, "category": "chat", "prompt": "<|im_start|>user\nWrite one sentence about the ocean.<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 178, "category": "long", "prompt": "Here is a short poem.\n\nThe river does not hurry, yet it reaches the sea;\nthe oak does not strain, yet it grows to the sky.\nThe stars do not shout, yet the whole night listens;\nso why, my heart, do you rush and cry?\n\nAnalyse this poem: what is its theme, what images does it use, and how does the structure support its message?"}
+{"id": 179, "category": "edge", "prompt": "x = {'a': [1, 2, {'b': None}]}"}
+{"id": 180, "category": "factual", "prompt": "DNA stands for"}
+{"id": 181, "category": "code", "prompt": "In big-O notation, the time complexity of merge sort is"}
+{"id": 182, "category": "math", "prompt": "How many ways can you arrange the letters in the word CAT?"}
+{"id": 183, "category": "multilingual", "prompt": "Explain in simple English what 'carpe diem' means."}
+{"id": 184, "category": "instruction", "prompt": "Give me a recipe for a simple vegetable soup."}
+{"id": 185, "category": "story", "prompt": "My grandmother always told me never to open the blue box in the attic."}
+{"id": 186, "category": "structured", "prompt": "Translate this table into sentences:\n| Country | Capital |\n| Peru | Lima |\n| Kenya | Nairobi |"}
+{"id": 187, "category": "chat", "prompt": "Tourist: Excuse me, how do I get to the museum?\nLocal:"}
+{"id": 188, "category": "long", "prompt": "Our team's weekly status report:\n\nCompleted: migrated the user database to the new cluster; fixed the memory leak in the image resizing service; onboarded two new engineers.\nIn progress: rewriting the search indexer (about 60 percent done); load testing the checkout service, which currently fails at 2,000 requests per second; updating the API documentation.\nBlocked: the analytics dashboard is waiting on access to the data warehouse, requested two weeks ago.\nRisks: the search rewrite may slip past the end of the month; one senior engineer is on leave next week.\n\nWrite a short summary of this report for senior management, highlighting what needs their attention."}
+{"id": 189, "category": "edge", "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"id": 190, "category": "factual", "prompt": "The tallest mountain on Earth, measured from sea level, is"}
+{"id": 191, "category": "code", "prompt": "def quicksort(xs):\n    if len(xs) <= 1:\n        return xs\n    pivot = xs[0]\n    "}
+{"id": 192, "category": "math", "prompt": "Let f(x) = x^2 - 4x + 3. Find the roots of f."}
+{"id": 193, "category": "multilingual", "prompt": "请用中文介绍一下你自己。"}
+{"id": 194, "category": "instruction", "prompt": "Explain the difference between weather and climate."}
+{"id": 195, "category": "story", "prompt": "The train was late again, so Maya decided to walk."}
+{"id": 196, "category": "structured", "prompt": "Turn these notes into bullet points: buy milk, call mom, finish report, book dentist"}
+{"id": 197, "category": "chat", "prompt": "<|im_start|>user\nWhat's 12 times 12?<|im_end|>\n<|im_start|>assistant\n"}
+{"id": 198, "category": "long", "prompt": "Explain step by step how public-key cryptography lets two people who have never met communicate securely over the internet. Cover key pairs, encryption and decryption, digital signatures, and the role of certificate authorities, and finish with an everyday example such as visiting a bank's website."}
+{"id": 199, "category": "edge", "prompt": "1/0"}
