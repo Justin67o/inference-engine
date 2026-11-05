@@ -1,4 +1,5 @@
-import math, torch, torch.nn as nn, torch.nn.functional as F
+import torch, torch.nn as nn, torch.nn.functional as F
+from engine.attention.reference import attend
 
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps):
@@ -34,20 +35,21 @@ class Attention(nn.Module):
         self.v_proj = nn.Linear(cfg.hidden_size, self.kv_h * self.d, bias=bias)
         self.o_proj = nn.Linear(self.h * self.d, cfg.hidden_size, bias=False)
 
-    def forward(self, x, cos, sin):                            # x: [T, hidden]
-        T = x.shape[0]
-        q = apply_rope(self.q_proj(x).view(T, self.h, self.d), cos, sin)
-        k = apply_rope(self.k_proj(x).view(T, self.kv_h, self.d), cos, sin)
-        v = self.v_proj(x).view(T, self.kv_h, self.d)
-        rep = self.h // self.kv_h                              # GQA: share KV heads
-        k, v = k.repeat_interleave(rep, dim=1), v.repeat_interleave(rep, dim=1)
-        q, k, v = (t.transpose(0, 1) for t in (q, k, v))       # [heads, T, D]
-        scores = q @ k.transpose(-2, -1) / math.sqrt(self.d)   # [heads, T, T]
-        causal = torch.ones(T, T, dtype=torch.bool, device=x.device).tril()
-        scores = scores.masked_fill(~causal, float("-inf"))
-        probs = torch.softmax(scores.float(), dim=-1).to(q.dtype)
-        out = (probs @ v).transpose(0, 1).reshape(T, self.h * self.d)
-        return self.o_proj(out)
+    def forward(self, x, cos, sin, segments, layer):                            # x: [N, hidden]
+        N = x.shape[0]
+        q = apply_rope(self.q_proj(x).view(N, self.h, self.d), cos, sin)
+        k = apply_rope(self.k_proj(x).view(N, self.kv_h, self.d), cos, sin)
+        v = self.v_proj(x).view(N, self.kv_h, self.d)
+        outs, i = [], 0                # i: first row of this segment in x
+
+        for s in segments:
+            end = s.start + s.n
+            s.cache.k[layer, s.start:end] = k[i:i + s.n]
+            s.cache.v[layer, s.start:end] = v[i:i + s.n]
+            q_pos = torch.arange(s.start, end, device=x.device)
+            outs.append(attend(q[i:i + s.n], s.cache.k[layer, :end], s.cache.v[layer, :end], q_pos))
+            i += s.n
+        return self.o_proj(torch.cat(outs))
 
 class MLP(nn.Module):
     def __init__(self, cfg):
@@ -66,7 +68,7 @@ class DecoderLayer(nn.Module):
         self.self_attn = Attention(cfg)
         self.post_attention_layernorm = RMSNorm(cfg.hidden_size, cfg.rms_norm_eps)
         self.mlp = MLP(cfg)
-    def forward(self, x, cos, sin):
-        x = x + self.self_attn(self.input_layernorm(x), cos, sin)
+    def forward(self, x, cos, sin, segments, layer):
+        x = x + self.self_attn(self.input_layernorm(x), cos, sin, segments, layer)
         return x + self.mlp(self.post_attention_layernorm(x))
 
