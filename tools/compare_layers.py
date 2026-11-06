@@ -3,7 +3,7 @@ Prints the max difference at every checkpoint and the first one that diverges.
 
     python -m tools.compare_layers --prompt "The capital of France is"
 """
-
+from engine.cache.kv_cache import Segment
 import argparse
 
 import torch
@@ -49,8 +49,8 @@ def main():
 
     ids = tok(args.prompt, return_tensors="pt").input_ids[0].cuda()
     with torch.inference_mode():
-        mine(ids, torch.arange(len(ids), device="cuda"))
-        ref(ids[None])
+        mine(ids, [Segment(mine.new_cache(len(ids)), 0, len(ids))])
+        ref(ids[None], logits_to_keep=1)    # HF also projects only the last token
     for h in mine_handles + ref_handles:
         h.remove()
 
@@ -58,6 +58,7 @@ def main():
     print(f"{'checkpoint':<22}{'max diff':>12}{'max |ref|':>12}{'relative':>12}")
     for name, ref_name in zip(names, ref_names):
         a, b = mine_out[name], ref_out[ref_name]
+        b = b[-len(a):] # my norm only sees the last token; HF's sees all
         diff, scale = (a - b).abs().max().item(), b.abs().max().item()
         rel = diff / scale
         bad = rel > args.rtol

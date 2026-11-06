@@ -3,7 +3,8 @@ import torch
 import math
 from engine.cache.kv_cache import KVCache, Segment
 from transformers import AutoConfig
-
+import copy
+from engine.model.model import Model
 from engine.attention.reference import attend
 from engine.model.layers import Attention, apply_rope, rope_cos_sin
 
@@ -107,3 +108,37 @@ def test_forward_two_segments_match_each_alone(cfg, dtype):
         b = attn(xb, cos[7:], sin[7:], [Segment(new_cache(), 0, 3)], layer=0)
 
     torch.testing.assert_close(both, torch.cat([a, b]))
+
+@pytest.fixture(scope="module")
+def tiny_model(cfg):
+    # Real Qwen shapes per layer, but 2 layers and a small vocab so it fits on the CPU
+    small = copy.deepcopy(cfg)
+    small.num_hidden_layers, small.vocab_size = 2, 1000
+    torch.manual_seed(0)
+    return Model(small).eval()
+
+
+def test_model_returns_last_token_logits_per_segment(tiny_model):
+    m = tiny_model
+    a, b = torch.randint(1000, (7,)), torch.randint(1000, (3,))
+
+    with torch.inference_mode():
+        both = m(torch.cat([a, b]), [Segment(m.new_cache(16), 0, 7), Segment(m.new_cache(16), 0, 3)])
+        alone_a = m(a, [Segment(m.new_cache(16), 0, 7)])
+        alone_b = m(b, [Segment(m.new_cache(16), 0, 3)])
+
+    assert both.shape == (2, 1000)                     # one row per segment, not per token
+    torch.testing.assert_close(both, torch.cat([alone_a, alone_b]))
+
+
+def test_model_decode_from_cache_matches_prefill(tiny_model):
+    m = tiny_model
+    ids = torch.randint(1000, (8,))
+
+    with torch.inference_mode():
+        full = m(ids, [Segment(m.new_cache(16), 0, 8)])   # all 8 tokens at once
+        cache = m.new_cache(16)
+        m(ids[:7], [Segment(cache, 0, 7)])                # prefill 7 tokens
+        step = m(ids[7:], [Segment(cache, 7, 1)])         # decode the 8th from the cache
+
+    torch.testing.assert_close(step, full)

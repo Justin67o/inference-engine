@@ -1,3 +1,4 @@
+from engine.cache.kv_cache import Segment
 import json
 import warnings
 from pathlib import Path
@@ -18,9 +19,10 @@ near_ties = []
 def test_fp32_logits_match(models, tok, prompt):
     ref, mine = models(torch.float32)
     ids = tok(prompt, return_tensors="pt").input_ids[0].cuda()
-    pos = torch.arange(len(ids), device="cuda")
+
     with torch.inference_mode():
-        diff = (ref(ids[None]).logits[0] - mine(ids, pos)).abs().max().item()
+        mine_logits = mine(ids, [Segment(mine.new_cache(len(ids)), 0, len(ids))])[0]
+        diff = (ref(ids[None]).logits[0, -1] - mine_logits).abs().max().item()
     assert diff < 1e-3, f"max abs logit diff {diff:.2e}"
 
 def top2_gap(logits):
@@ -46,7 +48,8 @@ def test_bf16_greedy_matches(models, tok, prompt):
 
         seq, my_logits = ids, []
         for _ in range(len(ref_tokens)): # HF may stop early at EOS
-            logits = mine(seq, torch.arange(len(seq), device="cuda"))[-1]
+            # Full recompute into a fresh cache eact step: the same shape as HF with use_cache=False
+            logits = mine(seq, [Segment(mine.new_cache(len(seq)), 0, len(seq))])[0]
             my_logits.append(logits)
             seq = torch.cat([seq, logits.argmax()[None]])
         my_tokens = seq[len(ids):]
