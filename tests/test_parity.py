@@ -1,10 +1,11 @@
-from engine.cache.kv_cache import Segment
 import json
 import warnings
 from pathlib import Path
 
 import pytest
 import torch
+
+from engine.cache.kv_cache import Segment
 
 PROMPTS_FILE = Path(__file__).parent / "prompts_200.jsonl"
 PROMPTS = [json.loads(line)["prompt"] for line in PROMPTS_FILE.read_text().splitlines()]

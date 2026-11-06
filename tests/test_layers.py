@@ -10,7 +10,6 @@ from transformers.models.qwen2.modeling_qwen2 import (
 from engine.model.layers import RMSNorm, apply_rope, rope_cos_sin
 
 
-
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
 def test_rmsnorm_matches_hf(dtype):
     torch.manual_seed(0)

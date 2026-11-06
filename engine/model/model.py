@@ -1,6 +1,9 @@
-import torch, torch.nn as nn
+import torch
+from torch import nn
+
 from engine.cache.kv_cache import KVCache
-from engine.model.layers import RMSNorm, DecoderLayer, rope_cos_sin
+from engine.model.layers import DecoderLayer, RMSNorm, rope_cos_sin
+
 
 class Model(nn.Module):
     def __init__(self, cfg):

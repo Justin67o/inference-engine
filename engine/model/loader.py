@@ -1,9 +1,13 @@
-import glob, os
+import glob
+import os
+
 import torch
-from engine.model.model import Model
 from huggingface_hub import snapshot_download
 from safetensors.torch import load_file
 from transformers import AutoConfig
+
+from engine.model.model import Model
+
 
 def load_model(name, dtype=torch.bfloat16, device="cuda"):
     path = snapshot_download(name, allow_patterns=["*.json", "*.safetensors"])
