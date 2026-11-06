@@ -1,4 +1,4 @@
-"""Single-request tokens/s for the naive (no KV cache) generate.
+"""Single-request tokens/s for the (KV cache) generate.
 
     python -m scripts.time_generate"""
 
@@ -25,14 +25,14 @@ def main():
     tok = AutoTokenizer.from_pretrained(args.model)
     ids = tok(args.prompt, return_tensors="pt").input_ids[0].cuda()
 
-    generate(model, ids, 8) # warm-up: CUDA kernel loading and cuBLAS setup
+    generate(model, [ids], 8) # warm-up: CUDA kernel loading and cuBLAS setup
 
     rates = []
 
     for _ in range(args.runs):
         torch.cuda.synchronize()
         start = time.perf_counter()
-        out = generate(model, ids, args.max_new_tokens) # no stop tokens: always the full length
+        out = generate(model, [ids], args.max_new_tokens)[0] # no stop tokens: always the full length
         torch.cuda.synchronize()
         elapsed = time.perf_counter() - start
         rates.append(len(out) / elapsed)
