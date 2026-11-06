@@ -1,11 +1,15 @@
-import asyncio, argparse
-import random
-import os
-import time
+import argparse
+import asyncio
 import json
+import os
+import random
+import time
+
 import httpx
-from bench.metrics import summarize
+
 from bench.env import get_env
+from bench.metrics import summarize
+
 
 async def one_request(client, url, prompt, max_tokens, results):
     sent, token_times = time.perf_counter(), []

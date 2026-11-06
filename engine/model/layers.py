@@ -1,5 +1,9 @@
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch
+import torch.nn.functional as F
+from torch import nn
+
 from engine.attention.reference import attend
+
 
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps):

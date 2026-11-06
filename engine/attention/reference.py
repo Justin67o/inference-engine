@@ -1,5 +1,7 @@
-import torch
 import math
+
+import torch
+
 
 def attend(q, k, v, q_pos): # q: [n, h, d]   k, v: [S, kv_h, d]
     rep = q.shape[1] // k.shape[1]

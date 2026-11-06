@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def per_request(results):
     """Latency metrics for one request, in seconds. TPOT is None when the server didn't stream
 

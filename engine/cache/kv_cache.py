@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+
 import torch
+
 
 class KVCache:
     def __init__(self, cfg, head_dim, max_len, dtype, device="cuda"):

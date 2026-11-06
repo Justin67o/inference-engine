@@ -3,13 +3,14 @@ Prints the max difference at every checkpoint and the first one that diverges.
 
     python -m tools.compare_layers --prompt "The capital of France is"
 """
-from engine.cache.kv_cache import Segment
 import argparse
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from engine.cache.kv_cache import Segment
 from engine.model.loader import load_model
+
 
 def capture(model, names):
     """Register a forward hook on each named submodule; returns (outputs, handles)"""
