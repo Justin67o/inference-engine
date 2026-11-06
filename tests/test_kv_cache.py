@@ -1,13 +1,74 @@
+import copy
+import json
+import math
+from pathlib import Path
+
 import pytest
 import torch
-import math
-from engine.cache.kv_cache import KVCache, Segment
 from transformers import AutoConfig
-import copy
-from engine.model.model import Model
-from engine.attention.reference import attend
-from engine.model.layers import Attention, apply_rope, rope_cos_sin
 
+from engine.attention.reference import attend
+from engine.cache.kv_cache import KVCache, Segment
+from engine.generate import generate
+from engine.model.layers import Attention, apply_rope, rope_cos_sin
+from engine.model.model import Model
+
+PROMPTS_FILE = Path(__file__).parent / "prompts_200.jsonl"
+PROMPTS = [json.loads(line)["prompt"] for line in PROMPTS_FILE.read_text().splitlines()][:24]
+MAX_NEW_TOKENS = 32
+STOP_IDS = (151645, 151643)     # <|im_end|>, <|endoftext|>: some prompts stop early
+NEAR_TIE = 0.5
+m1_cache = {}
+
+@torch.inference_mode()
+def m1_generate(model, ids):
+    """ Rerun the whole sequence each step. Returns (new tokens, top-2 gap at each step)."""
+    seq, gaps = ids, []
+
+    for _ in range(MAX_NEW_TOKENS):
+        logits = model(seq, [Segment(model.new_cache(len(seq)), 0, len(seq))])[0]
+        top = logits.float().topk(2).values
+        gaps.append((top[0] - top[1]).item())
+        seq = torch.cat([seq, logits.argmax()[None]])
+        if seq[-1].item() in STOP_IDS:
+            break
+    return seq[len(ids):], gaps
+
+def compare_to_m1(models, tok, dtype, batch_size):
+    """Runs generate() in batches of batch_size; returns (prompt index, step, M1's gap) per mismatch."""
+    _, mine = models(dtype)
+    prompts = [tok(p, return_tensors="pt").input_ids[0].cuda() for p in PROMPTS]
+    if dtype not in m1_cache: # slow; compute once per dtype
+        m1_cache.clear()
+        m1_cache[dtype] = [m1_generate(mine, ids) for ids in prompts]
+    ref = m1_cache[dtype]
+
+    out = []
+    for k in range(0, len(prompts), batch_size):    # consecutive prompts: mixed lengths and categories
+        out += generate(mine, prompts[k:k + batch_size], MAX_NEW_TOKENS, STOP_IDS)
+
+    mismatches = []
+    for i, (tokens, (ref_tokens, gaps)) in enumerate(zip(out, ref)):
+        if not torch.equal(tokens, ref_tokens):
+            n = min(len(tokens), len(ref_tokens))
+            diff = (tokens[:n] != ref_tokens[:n]).nonzero()
+            step = diff[0].item() if len(diff) else n
+            mismatches.append((i, step, gaps[step]))
+    return mismatches
+
+@pytest.mark.gpu
+@pytest.mark.parametrize("batch_size", [1, 5, 8])
+def test_fp32_generate_identical_to_m1(models, tok, batch_size):
+    mismatches = compare_to_m1(models, tok, torch.float32, batch_size)
+    assert not mismatches, f"(prompt, step, M1 top-2 gap): {mismatches}"
+
+@pytest.mark.gpu
+@pytest.mark.parametrize("batch_size", [1, 5, 8])
+def test_bf16_generate_differs_from_m1_only_at_near_ties(models, tok, batch_size):
+    # bf16 can't be token-identical: the cache changes matmul shapes, so near-tied tokens flip
+    mismatches = compare_to_m1(models, tok, torch.bfloat16, batch_size)
+    real = [m for m in mismatches if m[2] >= NEAR_TIE]
+    assert not real, f"not near-ties (prompt, step, M1 top-2 gap): {real}"
 
 @pytest.fixture(scope="module")
 def cfg():
