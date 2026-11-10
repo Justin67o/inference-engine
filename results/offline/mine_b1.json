@@ -1,0 +1,53 @@
+{
+  "config": {
+    "engine": "mine",
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "prompts": "bench/prompts/synthetic_200.jsonl",
+    "num_prompts": 8,
+    "batch_size": 1,
+    "max_tokens": 128,
+    "runs": 3,
+    "output": "results/offline/mine_b1.json",
+    "label": "mine"
+  },
+  "metrics": {
+    "throughput_tok_s": 27.38122101681914,
+    "runs": [
+      {
+        "tokens": 1024,
+        "seconds": 37.903847226989456,
+        "tok_s": 27.015727291947826
+      },
+      {
+        "tokens": 1024,
+        "seconds": 37.08663537200482,
+        "tok_s": 27.611024557190635
+      },
+      {
+        "tokens": 1024,
+        "seconds": 37.39789395699336,
+        "tok_s": 27.38122101681914
+      }
+    ]
+  },
+  "env": {
+    "timestamp": "2026-11-09T22:51:06",
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "driver_version": "617.42",
+      "clocks.sm": "1402 MHz",
+      "clocks.max.sm": "2100 MHz",
+      "power.draw": "23.09 W",
+      "temperature.gpu": "80",
+      "pstate": "P0"
+    },
+    "python": "3.12.3",
+    "torch": "2.14.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.20.2",
+    "git": {
+      "commit": "7752e07d11bc1b2a40048e2c84ccfd90ff9f0c10",
+      "dirty": false
+    }
+  }
+}
