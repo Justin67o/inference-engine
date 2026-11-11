@@ -10,6 +10,7 @@ trace*.json
 # Personal notes, kept local
 docs/notebook.md
 build_guide.md
+docs/part5_exercises.ipynb
 
 # Throwaway benchmark runs
 results/scratch/
