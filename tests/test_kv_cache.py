@@ -8,7 +8,7 @@ import torch
 from transformers import AutoConfig
 
 from engine.attention.reference import attend
-from engine.cache.kv_cache import KVCache, Segment
+from engine.cache.kv_cache import CachePool, KVCache, Segment
 from engine.generate import generate
 from engine.model.layers import Attention, apply_rope, rope_cos_sin
 from engine.model.model import Model
@@ -203,3 +203,22 @@ def test_model_decode_from_cache_matches_prefill(tiny_model):
         step = m(ids[7:], [Segment(cache, 7, 1)])         # decode the 8th from the cache
 
     torch.testing.assert_close(step, full)
+
+def test_cache_pool_take_and_give_back():
+    pool = CachePool(object, size=2)
+    a, b = pool.take(), pool.take()
+    assert a is not b and not pool.has_free()
+    pool.give_back(a)
+    assert pool.has_free() and pool.num_free == 1
+    assert pool.take() is a                   # reused, not reallocated
+    pool.give_back(a)
+    pool.give_back(b)
+    assert pool.num_free == pool.size         # nothing leaked
+
+
+def test_cache_pool_rejects_double_give_back():
+    pool = CachePool(object, size=1)
+    c = pool.take()
+    pool.give_back(c)
+    with pytest.raises(ValueError):
+        pool.give_back(c)
