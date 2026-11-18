@@ -12,11 +12,15 @@ class Scheduler:
         self.waiting = deque()          # arrival order: first in, first admitted
         self.running = []
 
-    def add(self, r):
+    def check(self, r):
+        """Raises ValueError for a request that could never run."""
         if len(r.prompt_ids) > self.cfg.max_num_batched_tokens:
             raise ValueError("prompt is longer than max_num_batched_tokens")
         if len(r.prompt_ids) + r.max_tokens > self.cfg.max_model_len:
             raise ValueError("prompt + max_tokens is longer than max_model_len")
+
+    def add(self, r):
+        self.check(r)
         self.waiting.append(r)
 
     def schedule(self):

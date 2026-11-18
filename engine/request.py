@@ -19,6 +19,7 @@ class Request:
     output_ids: list[int] = field(default_factory=list)
     state: State = State.WAITING
     cache: object = None    # a KVCache from the pool while RUNNING
+    generator: object = None # a seeded torch.Generator, made by the engine if the seed is set
     on_token: object = None # callback(token_id, done), called on the engine thread
 
 
@@ -26,4 +27,3 @@ class Request:
     def length(self):       # prompt + output tokens so far
         return len(self.prompt_ids) + len(self.output_ids)
 
-    
