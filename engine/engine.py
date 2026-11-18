@@ -1,6 +1,7 @@
 import queue
 
 import torch
+from transformers import AutoTokenizer, GenerationConfig
 
 from engine.cache.kv_cache import CachePool, Segment
 from engine.model.loader import load_model
@@ -12,22 +13,29 @@ class Engine:
     """Continuous batching: before every step the scheduler picks which sequences run, then one
     forward pass advances each of them by one token. Requests arrive through `inbox`."""
 
-    def __init__(self, model, cfg):
+    def __init__(self, model, cfg, eos_ids=(), tokenizer=None):
         self.model, self.cfg = model, cfg
         self.device = model.embed_tokens.weight.device
         pool = CachePool(lambda: model.new_cache(cfg.max_model_len), cfg.max_num_seqs)
         self.scheduler = Scheduler(cfg, pool)
         self.inbox = queue.Queue()          # thread-safe: the server puts, the engine gets
         self._stop = False
+        self.eos_ids = set(eos_ids)
+        self.tokenizer = tokenizer          # only needed for stop strings
+
 
     @classmethod
     def from_config(cls, cfg):
         model, _ = load_model(cfg.model)
-        return cls(model, cfg)
+        eos = GenerationConfig.from_pretrained(cfg.model).eos_token_id  # int or list
+        eos_ids = eos if isinstance(eos, list) else [eos]
+        return cls(model, cfg, eos_ids, AutoTokenizer.from_pretrained(cfg.model))
 
     def add_request(self, r):
         """Safe to call from any thread. Raises ValueError for a request that could never run."""
         self.scheduler.check(r)         # check here, so the error reaches the caller
+        if r.stop and self.tokenizer is None:
+            raise ValueError("stop strings need an engine with a tokenizer")
         if r.seed is not None:
             r.generator = torch.Generator(device=self.device).manual_seed(r.seed)
         self.inbox.put(r)
@@ -53,12 +61,31 @@ class Engine:
 
         for r, t in zip(reqs, tokens):
             r.output_ids.append(t)
-            done = len(r.output_ids) >= r.max_tokens
+            r.finish_reason = self._finish_reason(r, t)
+            done = r.finish_reason is not None
             if r.on_token is not None:
                 r.on_token(t, done)
             if done:
                 self.scheduler.finish(r)
         return True
+
+    def _finish_reason(self, r, t):
+        """Checks the newest token t: returns "stop", "length", or None to keep going."""
+        if t in self.eos_ids and not r.ignore_eos:
+            return "stop"
+        if r.stop and self._hit_stop_string(r):
+            return "stop"
+        if len(r.output_ids) >= r.max_tokens:
+            return "length"
+        return None
+
+    def _hit_stop_string(self, r):
+        """Decode only a tail of the output. A character takes at most 4 bytes, so a stop string of
+        c characters spans at most 4c byte-level tokens. An earlier match would have stopped us 
+        already, so any match in the tail is new"""
+        window = 4 * max(len(s) for s in r.stop)
+        tail = self.tokenizer.decode(r.output_ids[-window:])
+        return any(s in tail for s in r.stop)
 
     def run_until_idle(self):
         """Runs steps on the calling thread until every request has finished (tests, offline)."""
