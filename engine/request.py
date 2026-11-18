@@ -16,6 +16,8 @@ class Request:
     top_k: int = 0          # 0 = off
     top_p: float = 1.0      # 1.0 = off
     seed: int | None = None # None = use the shared generator
+    stop: list[str] = field(default_factory=list)   # stop strings, matched on decoded output
+    finish_reason: str | None = None    # "stop" or "length" once FINISHED
     output_ids: list[int] = field(default_factory=list)
     state: State = State.WAITING
     cache: object = None    # a KVCache from the pool while RUNNING

@@ -120,3 +120,56 @@ def test_run_forever_in_a_thread(tiny_model):
     assert not thread.is_alive()
     for r, p in zip(reqs, ps):
         assert r.output_ids == alone(tiny_model, p, 5)
+
+
+class LetterTok:                    # fake tokenizer: token id -> one letter
+    @staticmethod
+    def decode(ids):
+        return "".join(chr(ord("a") + i % 26) for i in ids)
+
+
+def run_one(model, p, **kw):
+    eos_ids, tok = kw.pop("eos_ids", ()), kw.pop("tokenizer", None)
+    engine = Engine(model, EngineConfig(max_num_seqs=4, max_num_batched_tokens=64,
+                                        max_model_len=64), eos_ids, tok)
+    r = Request(0, p, **kw)
+    engine.add_request(r)
+    engine.run_until_idle()
+    pool = engine.scheduler.pool
+    assert r.state is State.FINISHED and pool.num_free == pool.size
+    return r
+
+
+def test_max_tokens_finishes_with_length(tiny_model):
+    r = run_one(tiny_model, prompts(1)[0].tolist(), max_tokens=7)
+    assert len(r.output_ids) == 7 and r.finish_reason == "length"
+
+
+def test_eos_stops_early_and_ignore_eos_runs_on(tiny_model):
+    p = prompts(1, seed=6)[0].tolist()
+    full = alone(tiny_model, torch.tensor(p), 12)
+    eos = full[4]
+    cut = full[: full.index(eos) + 1]               # up to and including the first EOS
+
+    r = run_one(tiny_model, p, max_tokens=12, eos_ids={eos})
+    assert r.output_ids == cut and r.finish_reason == "stop"
+
+    r = run_one(tiny_model, p, max_tokens=12, eos_ids={eos}, ignore_eos=True)
+    assert r.output_ids == full and r.finish_reason == "length"
+
+
+def test_stop_string_stops_at_first_match(tiny_model):
+    p = prompts(1, seed=7)[0].tolist()
+    full = alone(tiny_model, torch.tensor(p), 12)
+    text = LetterTok.decode(full)
+    stop = text[5:7]                                 # two letters the model really produces
+    k = next(i for i in range(1, len(full) + 1) if stop in LetterTok.decode(full[:i]))
+
+    r = run_one(tiny_model, p, max_tokens=12, stop=[stop], tokenizer=LetterTok)
+    assert r.output_ids == full[:k] and r.finish_reason == "stop"
+
+
+def test_stop_strings_without_tokenizer_are_rejected(tiny_model):
+    engine = make_engine(tiny_model)
+    with pytest.raises(ValueError):
+        engine.add_request(Request(0, [1, 2], max_tokens=5, stop=["x"]))

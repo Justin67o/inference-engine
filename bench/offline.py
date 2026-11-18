@@ -19,6 +19,7 @@ from bench.env import get_env
 from engine.generate import generate
 from engine.model.loader import load_model
 
+
 def make_runner(engine, name, tok):
     """Returns run(texts, n) -> number of new tokens generated. Every sequence makes exactly n."""
     if engine == "mine":
