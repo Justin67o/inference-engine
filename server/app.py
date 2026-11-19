@@ -5,13 +5,15 @@ import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
 
 from engine.config import EngineConfig
 from engine.engine import Engine
 from engine.request import Request
 from server.detokenizer import Detokenizer
+from server.metrics import RequestTimer, watch
 
 _ids = itertools.count()
 
@@ -19,6 +21,7 @@ _ids = itertools.count()
 @asynccontextmanager
 async def lifespan(app):
     engine = Engine.from_config(EngineConfig()) # load here, not at import time
+    watch(engine)
     thread = threading.Thread(target=engine.run_forever, name="engine", daemon=True)
     thread.start()
     app.state.engine, app.state.thread = engine, thread
@@ -66,11 +69,13 @@ async def stream(r, events, engine):
 
 @app.post("/v1/completions")
 async def completions(body: CompletionRequest):
+    timer = RequestTimer()
     engine = app.state.engine
     loop = asyncio.get_running_loop()
     events = asyncio.Queue()
-
+    
     def on_token(token_id, done):   # runs on the engine thread
+        timer.token(done)
         loop.call_soon_threadsafe(events.put_nowait, (token_id, done))
 
     stop = [body.stop] if isinstance(body.stop, str) else (body.stop or [])
@@ -92,3 +97,8 @@ async def health():
     if thread is None or not thread.is_alive():
         raise HTTPException(status_code=503, detail="engine thread is not running")
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
