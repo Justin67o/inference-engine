@@ -12,14 +12,23 @@ COLUMNS = [
     ("rate", "rate"),
     ("ok", "ok"),
     ("errors", "err"),
+    ("budget", "budget"),
     ("ttft_p50", "TTFT p50"),
+    ("ttft_p95", "TTFT p95"),
     ("tpot_p50", "TPOT p50"),
+    ("tpot_p95", "TPOT p95"),
     ("e2e_p50", "E2E p50"),
     ("e2e_p95", "E2E p95"),
     ("e2e_p99", "E2E p99"),
     ("throughput", "tok/s"),
     ("commit", "commit"),
 ]
+
+
+def budget(run):
+    """max_num_batched_tokens from the server's /health, or None (e.g. the HF baseline)."""
+    server = run.get("server") or {}
+    return (server.get("config") or {}).get("max_num_batched_tokens")
 
 
 def load_runs(paths):
@@ -54,11 +63,13 @@ def to_row(run):
     return {
         "label": config.get("label", ""),
         "rate": config["rate"],
+        "budget": budget(run),
         "ok": metrics["num_ok"],
         "errors": metrics["num_errors"],
         "ttft_p50": pct(metrics["ttft"], "p50"),
         "ttft_p95": pct(metrics["ttft"], "p95"),
         "tpot_p50": pct(metrics["tpot"], "p50"),
+        "tpot_p95": pct(metrics["tpot"], "p95"),
         "e2e_p50": pct(metrics["e2e"], "p50"),
         "e2e_p95": pct(metrics["e2e"], "p95"),
         "e2e_p99": pct(metrics["e2e"], "p99"),
@@ -67,6 +78,39 @@ def to_row(run):
         "dirty": git.get("dirty"),
         "path": run["path"],
     }
+
+
+def plot_budget_sweep(rows, out_path):
+    """p95 TTFT and p95 TPOT against max_num_batched_tokens, one line per rate.
+    Repeated runs at the same budget and rate are averaged."""
+    rows = [r for r in rows if r["budget"] is not None and r["tpot_p95"] is not None]
+
+    by_rate = defaultdict(list)
+    for r in rows:
+        by_rate[r["rate"]].append(r)
+
+    ticks = sorted({r["budget"] for r in rows})
+    fig, (ax_ttft, ax_tpot) = plt.subplots(1, 2, figsize=(10, 4))
+    for rate, runs in sorted(by_rate.items()):
+        budgets = sorted({r["budget"] for r in runs})
+        ttft = [mean(r["ttft_p95"] for r in runs if r["budget"] == b) for b in budgets]
+        tpot = [mean(r["tpot_p95"] for r in runs if r["budget"] == b) * 1000 for b in budgets]
+        ax_ttft.plot(budgets, ttft, marker="o", label=f"rate {rate:g}")
+        ax_tpot.plot(budgets, tpot, marker="o", label=f"rate {rate:g}")
+
+    for ax, ylabel in ((ax_ttft, "p95 TTFT (s)"), (ax_tpot, "p95 TPOT (ms)")):
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(ticks, [str(b) for b in ticks])
+        ax.set_xlabel("max_num_batched_tokens")
+        ax.set_ylabel(ylabel)
+        ax.grid(alpha=0.3)
+        ax.legend()
+    fig.suptitle("Token budget tradeoff")
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
 
 def fmt(x):
     """One table cell: n/a for None, 2 decimals for floats, everything else as-is."""
@@ -130,6 +174,7 @@ def main():
     parser = argparse.ArgumentParser(description="Results table and latency-vs-rate plot.")
     parser.add_argument("paths", nargs="+", help="results JSON files, e.g. results/*.json")
     parser.add_argument("--plot", default="docs/figures/latency_vs_rate.png")
+    parser.add_argument("--sweep-plot", help="also plot p95 TTFT/TPOT against the token budget")
     args = parser.parse_args()
 
     runs = load_runs(args.paths)
@@ -141,7 +186,11 @@ def main():
     print(format_table(rows))
     plot_latency_vs_rate(rows, args.plot)
     print(f"\nsaved {args.plot}")
+    if args.sweep_plot:
+        plot_budget_sweep(rows, args.sweep_plot)
+        print(f"\nsaved {args.sweep_plot}")
 
 
 if __name__ == "__main__":
     main()
+    

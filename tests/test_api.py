@@ -123,7 +123,9 @@ def test_request_that_does_not_fit_is_400(client):
 
 def test_health(client):
     resp = client.get("/health")
-    assert resp.status_code == 200 and resp.json() == {"status": "ok"}
+    assert resp.status_code == 200 and resp.json()["status"] == "ok"
+    assert resp.json()["config"]["max_num_batched_tokens"] == 64
+
 
 
 def test_client_disconnect_aborts_and_frees_the_cache(engine, server_url, monkeypatch):

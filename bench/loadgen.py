@@ -15,6 +15,7 @@ async def one_request(client, url, prompt, max_tokens, results):
     sent, token_times = time.perf_counter(), []
     body = {"prompt": prompt, 
             "max_tokens": max_tokens, 
+            "ignore_eos": True,     # exactly max_tokens, like the HF baseline's min_new_tokens
             "stream": True}
     async with client.stream("POST", url, json=body) as response:
         ok = response.status_code == 200
@@ -35,6 +36,16 @@ async def one_request(client, url, prompt, max_tokens, results):
                     "n": max_tokens,
                     "ok": ok
                     })
+
+
+def server_info(url):
+    """The server's /health JSON (my server reports its EngineConfig there), or None"""
+    try:
+        r = httpx.get(url.replace("/v1/completions", "/health"), timeout=5)
+        return r.json() if r.status_code == 200 else None
+    except(httpx.HTTPError, ValueError):
+        return None
+
 
 async def run(url, prompts, rate_per_s, max_tokens):
     results = []
@@ -71,6 +82,8 @@ def main():
 
     prompts = [all_prompts[i % len(all_prompts)] for i in range(args.num_requests)]
 
+    server = server_info(args.url)
+
     if args.warmup > 0:
         warm_prompts = [all_prompts[i % len(all_prompts)] for i in range(args.warmup)]
         asyncio.run(run(args.url, warm_prompts, 100.0, args.max_tokens))
@@ -82,7 +95,8 @@ def main():
     metrics = summarize(results)
 
     with open(args.output, "w") as f:
-        json.dump({"config": vars(args), "metrics": metrics, "env": env, "results": results}, f, indent=2)
+        json.dump({"config": vars(args), "server": server, "metrics": metrics, "env": env,
+                       "results": results}, f, indent=2)
 
     
     print(json.dumps(metrics, indent=2))

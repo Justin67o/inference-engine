@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, fields
 
 
 @dataclass
@@ -12,4 +13,14 @@ class EngineConfig:
         if self.max_num_seqs > self.max_num_batched_tokens:
             raise ValueError("max_num_seqs must be <= max_num_batched_tokens")
 
-        
+
+    @classmethod
+    def from_env(cls):
+        """The defaults, overriden by ENGINE_<FIELD> environment variables,
+        e.g. ENGINE_MAX_NUM_BATCHED_TOKENS=256"""
+        overrides = {}
+        for f in fields(cls):
+            value = os.environ.get(f"ENGINE_{f.name.upper()}")
+            if value is not None:
+                overrides[f.name] = type(f.default)(value)
+        return cls(**overrides)
