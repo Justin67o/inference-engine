@@ -173,3 +173,36 @@ def test_stop_strings_without_tokenizer_are_rejected(tiny_model):
     engine = make_engine(tiny_model)
     with pytest.raises(ValueError):
         engine.add_request(Request(0, [1, 2], max_tokens=5, stop=["x"]))
+
+def test_abort_frees_the_cache_and_stops_tokens(tiny_model):
+    engine, seen = make_engine(tiny_model), []
+    p = prompts(1)[0].tolist()
+    r = Request(0, p, max_tokens=20, on_token=lambda t, d: seen.append(t))
+    engine.add_request(r)
+    engine.step(); engine.step()                    # prefill + one decode
+    engine.abort_request(r)
+    engine.run_until_idle()
+    assert len(seen) == 2 and r.finish_reason == "abort" and r.cache is None
+    pool = engine.scheduler.pool
+    assert pool.num_free == pool.size and not engine.scheduler.running
+
+
+def test_abort_while_waiting_never_runs(tiny_model):
+    engine = make_engine(tiny_model, max_num_seqs=1)
+    a, b = (Request(i, p.tolist(), max_tokens=5) for i, p in enumerate(prompts(2)))
+    engine.add_request(a); engine.add_request(b)
+    engine.step()                                   # a runs, b waits (only 1 seq)
+    engine.abort_request(b)
+    engine.run_until_idle()
+    assert b.output_ids == [] and b.state is State.FINISHED
+    assert len(a.output_ids) == 5                   # the other request is unaffected
+
+
+def test_abort_after_finish_is_a_no_op(tiny_model):
+    engine = make_engine(tiny_model)
+    r = Request(0, prompts(1)[0].tolist(), max_tokens=3)
+    engine.add_request(r)
+    engine.run_until_idle()
+    engine.abort_request(r)
+    engine.step()
+    assert r.finish_reason == "length"
