@@ -32,5 +32,5 @@ class RequestTimer:
         if self.first is None:
             self.first = now
             TTFT.observe(now - self.start)
-        if done and self.n > 1:         # TOPT is undefined for a 1-token output
+        if done and self.n > 1:         # TPOT is undefined for a 1-token output
             TPOT.observe((now- self.first) / (self.n - 1))

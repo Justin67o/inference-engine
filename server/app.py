@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from engine.config import EngineConfig
 from engine.engine import Engine
 from engine.request import Request
-from server.detokenizer import Detokenizer
+from server.detokenizer import Detokenizer, StopStringFilter
 from server.metrics import RequestTimer, watch
 
 _ids = itertools.count()
@@ -52,6 +52,7 @@ def sse(rid, text, finish_reason):
 
 async def stream(r, events, engine):
     detok = Detokenizer(engine.tokenizer)
+    stops = StopStringFilter(r.stop)
     done = False
     try:
         while not done:
@@ -59,6 +60,9 @@ async def stream(r, events, engine):
             text = detok.push(token_id)
             if done:
                 text += detok.flush()
+            text = stops.push(text)
+            if done:
+                text += stops.flush()
             if text or done:        # a half-finished emoji yields "": don't send anything
                 yield sse(r.id, text, r.finish_reason if done else None)
         yield "data: [DONE]\n\n"

@@ -33,4 +33,47 @@ class Detokenizer:
         all_text = self._decode(self.ids[self.prefix:])
         self.prefix = self.read = len(self.ids)
         return all_text[len(done_text):]
+
+
+class StopStringFilter:
+    """Removes stop strings from streamed text.
     
+    The engine stops on the token that completes a stop string, but earlier tokens may 
+    already hold its start ("\\n" then "\\n" for "\\n\\n"). So push() holds back any tail
+    that could still grow into a stop string, and cuts the text at the first full match
+    """
+
+    def __init__(self, stop):
+        self.stop = [s for s in stop if s]      # an empty string would match everywhere
+        self.held = ""
+        self.stopped = False
+
+    def push(self, text):
+        """Adds newly decoded text, returns the part that is safe to send"""
+        if self.stopped:
+            return ""
+        self.held += text
+        hits = [i for i in (self.held.find(s) for s in self.stop) if i != -1]
+        if hits:
+            self.stopped = True
+            out, self.held = self.held[:min(hits)], ""
+            return out
+        keep = self._partial_tail()
+        out = self.held[:len(self.held) - keep]
+        self.held = self.held[len(self.held) - keep:]
+        return out
+
+    def flush(self):
+        """At the end of a request: returns held text that never became a stop string."""
+        out, self.held = ("" if self.stopped else self.held), ""
+        return out
+
+    def _partial_tail(self):
+        """Length of the longest tail of held that is a proper prefix of some stop string"""
+        best = 0
+        for s in self.stop:
+            for n in range(min(len(s) - 1, len(self.held)), best, -1):
+                if self.held.endswith(s[:n]):
+                    best = n
+                    break
+        return best

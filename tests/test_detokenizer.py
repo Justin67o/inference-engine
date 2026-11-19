@@ -1,6 +1,6 @@
 import pytest
 
-from server.detokenizer import Detokenizer
+from server.detokenizer import Detokenizer, StopStringFilter
 
 TEXTS = [
     "Hello, world! How are you today?",
@@ -50,3 +50,42 @@ def test_flush_returns_unfinished_bytes(tok):
     pieces, rest = stream(tok, ids)
     assert "".join(pieces) == ""
     assert rest.endswith("\ufffd")
+
+
+def run_filter(stop, pieces):
+    f = StopStringFilter(stop)
+    out = [f.push(p) for p in pieces]
+    return out, f.flush()
+
+
+def test_stop_string_split_across_pieces_is_removed():
+    out, rest = run_filter(["\n\n"], ["Hello", "\n", "\n"])
+    assert "".join(out) + rest == "Hello"
+
+
+def test_partial_match_is_held_then_released():
+    out, rest = run_filter(["STOP"], ["a S", "T", "x"])
+    assert out == ["a ", "", "STx"]
+    assert rest == ""
+
+
+def test_unfinished_prefix_released_on_flush():
+    out, rest = run_filter(["STOP"], ["end ST"])   # e.g. finished on max_tokens
+    assert out == ["end "]
+    assert rest == "ST"
+
+
+def test_text_after_stop_is_dropped():
+    out, rest = run_filter(["."], ["Hi. More", " text"])
+    assert out == ["Hi", ""]
+    assert rest == ""
+
+
+def test_earliest_of_several_stop_strings_wins():
+    out, _ = run_filter(["world", "lo"], ["hello world"])
+    assert out == ["hel"]
+
+
+def test_no_stop_strings_passes_through():
+    out, rest = run_filter([], ["a", "b"])
+    assert out == ["a", "b"] and rest == ""
