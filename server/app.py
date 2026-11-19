@@ -3,6 +3,7 @@ import itertools
 import json
 import threading
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response, StreamingResponse
@@ -20,7 +21,9 @@ _ids = itertools.count()
 
 @asynccontextmanager
 async def lifespan(app):
-    engine = Engine.from_config(EngineConfig()) # load here, not at import time
+    cfg = EngineConfig.from_env()
+    print(f"engine config: {cfg}", flush=True)
+    engine = Engine.from_config(cfg) # load here, not at import time
     watch(engine)
     thread = threading.Thread(target=engine.run_forever, name="engine", daemon=True)
     thread.start()
@@ -100,7 +103,8 @@ async def health():
     thread = getattr(app.state, "thread", None)
     if thread is None or not thread.is_alive():
         raise HTTPException(status_code=503, detail="engine thread is not running")
-    return {"status": "ok"}
+    return {"status": "ok", "config": asdict(app.state.engine.cfg)}
+
 
 
 @app.get("/metrics")
