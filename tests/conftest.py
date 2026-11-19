@@ -1,7 +1,11 @@
+import copy
 import gc
 
 import pytest
 import torch
+from transformers import AutoConfig
+
+from engine.model.model import Model
 
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -43,3 +47,12 @@ def models():
 
         return loaded[dtype]
     return load
+
+
+@pytest.fixture(scope="session")
+def tiny_model():
+    """Real Qwen shapes per layer, but 2 layers and a 1000-token vocab so it runs on the CPU"""
+    cfg = copy.deepcopy(AutoConfig.from_pretrained(MODEL))
+    cfg.num_hidden_layers, cfg.vocab_size = 2, 1000
+    torch.manual_seed(0)
+    return Model(cfg).eval()

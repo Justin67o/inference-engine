@@ -1,26 +1,15 @@
-import copy
 import threading
 
 import pytest
 import torch
-from transformers import AutoConfig
 
 from engine.config import EngineConfig
 from engine.engine import Engine
 from engine.generate import generate
-from engine.model.model import Model
 from engine.request import Request, State
 
 VOCAB = 1000
 
-
-@pytest.fixture(scope="module")
-def tiny_model():
-    # Real Qwen shapes per layer, but 2 layers and a small vocab so it runs on the CPU
-    cfg = copy.deepcopy(AutoConfig.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct"))
-    cfg.num_hidden_layers, cfg.vocab_size = 2, VOCAB
-    torch.manual_seed(0)
-    return Model(cfg).eval()
 
 
 def make_engine(model, **limits):
@@ -206,3 +195,59 @@ def test_abort_after_finish_is_a_no_op(tiny_model):
     engine.abort_request(r)
     engine.step()
     assert r.finish_reason == "length"
+
+
+def test_outputs_do_not_depend_on_arrival_order(tiny_model):
+    ps = prompts(6, seed=8)
+
+    def run(order):
+        engine = make_engine(tiny_model, max_num_seqs=2)  # few slots: order decides who batches with whom
+        reqs = {i: Request(i, ps[i].tolist(), max_tokens=6,
+                           temperature=1.0 if i % 2 else 0.0, seed=100 + i) for i in order}
+        for i in order:
+            engine.add_request(reqs[i])
+        engine.run_until_idle()
+        return {i: r.output_ids for i, r in reqs.items()}
+
+    first = run([0, 1, 2, 3, 4, 5])
+    for order in ([5, 4, 3, 2, 1, 0], [3, 0, 5, 1, 4, 2]):
+        assert run(order) == first
+
+
+def assert_no_leaks(engine, reqs):
+    s = engine.scheduler
+    assert s.pool.num_free == s.pool.size
+    assert len({id(c) for c in s.pool.free}) == s.pool.size     # no cache in the pool twice
+    assert not s.running and not s.waiting
+    assert engine.inbox.empty() and engine.aborts.empty()
+    assert all(r.state is State.FINISHED and r.cache is None for r in reqs)
+
+
+def test_no_leaked_caches_after_every_kind_of_finish(tiny_model):
+    ps = prompts(6, seed=9)
+    eos = alone(tiny_model, ps[1], 10)[3]
+    engine = Engine(tiny_model, EngineConfig(max_num_seqs=2, max_num_batched_tokens=64,
+                                             max_model_len=64), eos_ids={eos})
+    reqs = [Request(i, p.tolist(), max_tokens=10) for i, p in enumerate(ps)]
+    reqs[2].ignore_eos = True                       # guarantees one "length"
+    for r in reqs:
+        engine.add_request(r)
+    with pytest.raises(ValueError):                 # rejected: never enters the engine
+        engine.add_request(Request(99, [1] * 60, max_tokens=10))
+    engine.step()                                   # reqs 0 and 1 run, the rest wait
+    engine.abort_request(reqs[0])                   # abort while running
+    engine.abort_request(reqs[5])                   # abort while waiting
+    engine.run_until_idle()
+
+    assert {"stop", "length", "abort"} <= {r.finish_reason for r in reqs}
+    assert_no_leaks(engine, reqs)
+
+    # The returned caches are reused cleanly: a second wave still matches generate
+    wave = [Request(i, p.tolist(), max_tokens=8, ignore_eos=True)
+            for i, p in enumerate(prompts(4, seed=10))]
+    for r in wave:
+        engine.add_request(r)
+    engine.run_until_idle()
+    for r in wave:
+        assert r.output_ids == alone(tiny_model, torch.tensor(r.prompt_ids), 8)
+    assert_no_leaks(engine, wave)

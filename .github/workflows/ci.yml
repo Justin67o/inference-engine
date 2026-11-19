@@ -18,7 +18,7 @@ jobs:
         run: pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install other dependencies
-        run: pip install ruff pytest hypothesis numpy transformers safetensors
+        run: pip install ruff pytest hypothesis numpy transformers safetensors fastapi httpx prometheus_client uvicorn
 
       - name: Lint
         run: ruff check .
