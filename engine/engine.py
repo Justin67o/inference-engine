@@ -19,6 +19,7 @@ class Engine:
         pool = CachePool(lambda: model.new_cache(cfg.max_model_len), cfg.max_num_seqs)
         self.scheduler = Scheduler(cfg, pool)
         self.inbox = queue.Queue()          # thread-safe: the server puts, the engine gets
+        self.aborts = queue.Queue()         # thread-safe: the server puts, the engine gets
         self._stop = False
         self.eos_ids = set(eos_ids)
         self.tokenizer = tokenizer          # only needed for stop strings
@@ -110,6 +111,19 @@ class Engine:
             try:
                 r = self.inbox.get_nowait()
             except queue.Empty:
-                return
+                break
             if r is not None:
                 self.scheduler.add(r)
+
+        while True:
+            try:
+                self.scheduler.abort(self.aborts.get_nowait())
+            except queue.Empty:
+                return
+
+    def abort_request(self, r):
+        """Safe to call from any thread: r stops at the start of the next step and frees its cache.
+        Never calls r.on_token again after that"""
+        self.aborts.put(r)
+
+    

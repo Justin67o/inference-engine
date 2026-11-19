@@ -47,18 +47,21 @@ def sse(rid, text, finish_reason):
     return f"data: {json.dumps(chunk)}\n\n"
 
 
-async def stream(r, events, tokenizer):
-    detok = Detokenizer(tokenizer)
-    while True:
-        token_id, done = await events.get()
-        text = detok.push(token_id)
-        if done:
-            text += detok.flush()
-        if text or done:        # a half-finished emoji yields "": don't send anything
-            yield sse(r.id, text, r.finish_reason if done else None)
-        if done:
-            break
-    yield "data: [DONE]\n\n"
+async def stream(r, events, engine):
+    detok = Detokenizer(engine.tokenizer)
+    done = False
+    try:
+        while not done:
+            token_id, done = await events.get()
+            text = detok.push(token_id)
+            if done:
+                text += detok.flush()
+            if text or done:        # a half-finished emoji yields "": don't send anything
+                yield sse(r.id, text, r.finish_reason if done else None)
+        yield "data: [DONE]\n\n"
+    finally:
+        if not done:                # client left early, free its slot and cache
+            engine.abort_request(r)
 
 
 @app.post("/v1/completions")
@@ -79,7 +82,7 @@ async def completions(body: CompletionRequest):
         engine.add_request(r)
     except ValueError as e:         # prompt too long or other errors
         raise HTTPException(status_code=400, detail=str(e))
-    return StreamingResponse(stream(r, events, engine.tokenizer),
+    return StreamingResponse(stream(r, events, engine),
                              media_type="text/event-stream")
 
 

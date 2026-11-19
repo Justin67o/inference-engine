@@ -49,3 +49,13 @@ class Scheduler:
         self.pool.give_back(r.cache)
         r.cache = None
 
+    def abort(self, r):
+        """Drops r wherever it is. A no-op if it has already finished."""
+        if r.state is State.WAITING:
+            if r in self.waiting:
+                self.waiting.remove(r)
+            r.state = State.FINISHED
+        elif r.state is State.RUNNING:
+            self.finish(r)      # frees the cache, same as a normal finish
+        r.finish_reason = r.finish_reason or "abort"
+        
