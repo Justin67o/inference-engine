@@ -19,14 +19,15 @@ def decode_attention(q, k_cache, v_cache, tables, lens, M, bs):
     new token   M: max(lens) as an int"""
 
     B, h, d = q.shape
+    kv_h = k_cache.shape[1]
 
     pos = torch.arange(M, device=q.device)
-    slot_idx = tables[:, pos // bs] * bs + pos % bs
-    rep = h // k_cache.shape[1]
-    K = k_cache[slot_idx].repeat_interleave(rep, 2).transpose(1, 2)
-    V = v_cache[slot_idx].repeat_interleave(rep, 2).transpose(1, 2)
-    scores = (q[:, :, None, :] @ K.transpose(-2, -1)) / math.sqrt(d)
-    pad = pos[None, :] >= lens[:, None]
+    slot_idx = tables[:, pos // bs] * bs + pos % bs         # [B, M]
+    K = k_cache[slot_idx].transpose(1, 2)                   # [B, kv_h, M, d]
+    V = v_cache[slot_idx].transpose(1, 2)
+    q = q.view(B, kv_h, h // kv_h, d)                       # group query heads by their KV head (head j uses j // rep)
+    scores = (q @ K.transpose(-2, -1)) / math.sqrt(d)       # [B, kv_h, rep, M]
+    pad = pos[None, :] >= lens[:, None]                     # [B, M]
     scores = scores.masked_fill(pad[:, None, None, :], float("-inf"))
-    out = torch.softmax(scores.float(), -1).to(q.dtype) @ V
+    out = torch.softmax(scores.float(), -1).to(q.dtype) @ V # [B, kv_h, rep, d]
     return out.reshape(B, h * d)
