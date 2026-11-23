@@ -12,23 +12,28 @@ from bench.metrics import summarize
 
 
 async def one_request(client, url, prompt, max_tokens, results):
-    sent, token_times = time.perf_counter(), []
+    sent, token_times, ok = time.perf_counter(), [], False
     body = {"prompt": prompt, 
             "max_tokens": max_tokens, 
             "ignore_eos": True,     # exactly max_tokens, like the HF baseline's min_new_tokens
             "stream": True}
-    async with client.stream("POST", url, json=body) as response:
-        ok = response.status_code == 200
-        if not ok:
-            print(f"Error: HTTP {response.status_code}")
-        
+    try:
+        async with client.stream("POST", url, json=body) as response:
+            ok = response.status_code == 200
+            if not ok:
+                print(f"Error: HTTP {response.status_code}")
 
-        async for line in response.aiter_lines():
-            if line.startswith("data: ") and line != "data: [DONE]":
-                token_times.append(time.perf_counter())
-            
+            async for line in response.aiter_lines():
+                if line.startswith("data: ") and line != "data: [DONE]":
+                    if '"finish_reason": "error"' in line:      # the engine died mid-request
+                        ok = False
+                        print("Error: the server ended the request with an error")
+                    else:
+                        token_times.append(time.perf_counter())
+    except httpx.HTTPError as e:    # dropped connection, or no data for --read-timeout seconds
+        ok = False
+        print(f"Error: {type(e).__name__}: {e}")
 
-    
     if not token_times:
         token_times = [time.perf_counter()]
     results.append({"sent": sent, 
@@ -59,11 +64,12 @@ def preemptions(url):
     return None
 
 
-async def run(url, prompts, rate_per_s, max_tokens):
+async def run(url, prompts, rate_per_s, max_tokens, read_timeout=None):
     results = []
     limits = httpx.Limits(max_connections=1000)
+    timeout = httpx.Timeout(None, read=read_timeout)   # no limit on connect/write, only on silence
 
-    async with httpx.AsyncClient(timeout=None, limits=limits) as client:
+    async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
         tasks = []
         for p in prompts:
             tasks.append(asyncio.create_task(
@@ -85,6 +91,8 @@ def main():
     parser.add_argument("--warmup", type=int, default=20, help="number of warmup requests to send")
     parser.add_argument("--output", required=True, help="output file to write results to")
     parser.add_argument("--label", default="", help="what is being measured")
+    parser.add_argument("--read-timeout", type=float, default=600,
+                        help="seconds without any data before a request counts as failed")
     args = parser.parse_args()
 
     os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
@@ -98,12 +106,12 @@ def main():
 
     if args.warmup > 0:
         warm_prompts = [all_prompts[i % len(all_prompts)] for i in range(args.warmup)]
-        asyncio.run(run(args.url, warm_prompts, 100.0, args.max_tokens))
+        asyncio.run(run(args.url, warm_prompts, 100.0, args.max_tokens, args.read_timeout))
         print(f"warm-up: {args.warmup} done")
     random.seed(args.seed)
 
     before = preemptions(args.url)
-    results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens))
+    results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens, args.read_timeout))
     after = preemptions(args.url)
     env = get_env() # right after the run, so GPU state is still under load
     metrics = summarize(results)
