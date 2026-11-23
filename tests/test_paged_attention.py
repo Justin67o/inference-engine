@@ -39,3 +39,29 @@ def test_decode_matches_attend(seed):
         slots = torch.tensor([tables[b][p // bs] * bs + p % bs for p in range(n)], device="cuda")
         ref = attend(q[b:b + 1], k_cache[slots], v_cache[slots], torch.tensor([n - 1], device="cuda"))
         torch.testing.assert_close(out[b:b + 1], ref, atol=1e-4, rtol=1e-4)
+
+
+@pytest.mark.gpu
+@pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
+@pytest.mark.parametrize("seed", range(5))
+def test_triton_decode_matches_pytorch(seed, dtype):
+    pytest.importorskip("triton")       # CPU-only PyTorch has none
+    from engine.attention.triton_paged import paged_decode_attention
+
+    torch.manual_seed(seed); rnd = random.Random(seed)
+    bs, num_blocks, h, kv_h, d = 16, 1024, 14, 2, 64
+    k_cache = torch.randn(num_blocks * bs, kv_h, d, device="cuda", dtype=dtype)
+    v_cache = torch.randn(num_blocks * bs, kv_h, d, device="cuda", dtype=dtype)
+
+    lens = [1, 15, 16, 17, 33] + [rnd.randint(1, 300) for _ in range(27)]   # block edges + random
+    free = rnd.sample(range(num_blocks), num_blocks)                        # out-of-order blocks
+    tables = [[free.pop() for _ in range(-(-n // bs))] for n in lens]
+    width = max(map(len, tables))
+    padded = torch.tensor([t + [0] * (width - len(t)) for t in tables], device="cuda")
+    q = torch.randn(len(lens), h, d, device="cuda", dtype=dtype)
+    args = (q, k_cache, v_cache, padded, torch.tensor(lens, device="cuda"), max(lens), bs)
+
+    out = paged_decode_attention(*args)
+    ref = decode_attention(*[a.float() if torch.is_tensor(a) and a.is_floating_point() else a for a in args])
+    assert (out.float() - ref).abs().max() < (1e-3 if dtype == torch.float32 else 2e-2)
+    
