@@ -323,3 +323,36 @@ def test_10k_requests_leak_no_blocks():
     assert_no_leaks(engine, reqs)
     assert {"stop", "length", "abort"} <= {r.finish_reason for r in reqs}
     assert s.preemptions > 0                        # otherwise the hard path never ran
+
+
+def test_crash_ends_every_request_and_rejects_new_ones(tiny_model):
+    eng = Engine(tiny_model, EngineConfig(max_num_seqs=1, max_num_batched_tokens=64, max_model_len=64))
+    events = {}
+
+    def make(i):
+        return Request(id=i, prompt_ids=[1, 2, 3], max_tokens=20, ignore_eos=True,
+                       on_token=lambda t, done: events.setdefault(i, []).append((t, done)))
+
+    reqs = [make(i) for i in range(3)]          # max_num_seqs=1: one runs, two wait
+    late = make(3)                              # still in the inbox when the step fails
+    calls, step = [], eng.step
+
+    def crashing_step():
+        calls.append(1)
+        if len(calls) == 4:
+            eng.add_request(late)
+            raise RuntimeError("CUDA error: unknown error")
+        return step()
+
+    eng.step = crashing_step
+    for r in reqs:
+        eng.add_request(r)
+    with pytest.raises(RuntimeError, match="CUDA"):     # on this thread, so the re-raise reaches us
+        eng.run_forever()
+
+    assert len(events[0]) == 4                  # prefill + 2 decodes gave 3 tokens, then the error
+    for r in [*reqs, late]:
+        assert r.state is State.FINISHED and r.finish_reason == "error"
+        assert events[r.id][-1] == (None, True)
+    with pytest.raises(RuntimeError, match="engine stopped"):
+        eng.add_request(make(4))

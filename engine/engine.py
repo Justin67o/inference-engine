@@ -1,5 +1,6 @@
 import os
 import queue
+import threading
 
 import torch
 from transformers import AutoTokenizer, GenerationConfig
@@ -7,6 +8,7 @@ from transformers import AutoTokenizer, GenerationConfig
 from engine.cache.block_manager import BlockManager
 from engine.cache.kv_cache import Segment
 from engine.model.loader import load_model
+from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
 
@@ -23,6 +25,8 @@ class Engine:
         self._stop = False
         self.eos_ids = set(eos_ids)
         self.tokenizer = tokenizer          # only needed for stop strings
+        self.error = None                   # why run_forever died; the engine takes no more requests
+        self._lock = threading.Lock()       # add_request vs the crash sweep, so no request slips in between
         bs = 16
         if num_blocks is None:
             num_blocks = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // bs)
@@ -47,7 +51,10 @@ class Engine:
             raise ValueError("stop strings need an engine with a tokenizer")
         if r.seed is not None:
             r.generator = torch.Generator(device=self.device).manual_seed(r.seed)
-        self.inbox.put(r)
+        with self._lock:
+            if self.error is not None:
+                raise RuntimeError(f"engine stopped after an error: {self.error!r}")
+            self.inbox.put(r)
 
     @torch.inference_mode()
     def step(self):
@@ -102,12 +109,40 @@ class Engine:
             pass
 
     def run_forever(self):
-        """The engine thread's loop: step while there is work, sleep while idle."""
-        while not self._stop:
-            if not self.step():
-                r = self.inbox.get()        # idle: block until something arrives
-                if r is not None:           # None is stop()'s wake-up call
-                    self.scheduler.add(r)
+        """The engine thread's loop: step while there is work, sleep while idle. If a step raises
+        (e.g. a CUDA error), every pending request ends with finish_reason "error" before it re-raises"""
+        try:
+            while not self._stop:
+                if not self.step():
+                    r = self.inbox.get()        # idle: block until something arrives
+                    if r is not None:           # None is stop()'s wake-up call
+                        self.scheduler.add(r)
+        except Exception as e:
+            self._fail_all(e)
+            raise                               # the thread's excepthook prints it to the log
+
+    def _fail_all(self, e):
+        """Ends every request the engine knows about, so no client waits forever on a dead engine"""
+        with self._lock:                        # after this, add_request raises
+            self.error = e
+        pending = [*self.scheduler.running, *self.scheduler.waiting]
+        for q in (self.inbox, self.aborts):
+            while True:
+                try:
+                    r = q.get_nowait()
+                except queue.Empty:
+                    break
+                if r is None:
+                    continue
+                if q is self.aborts:            # the client already left: no on_token after an abort
+                    r.on_token = None
+                elif r not in pending:
+                    pending.append(r)
+        for r in pending:
+            r.state = State.FINISHED
+            r.finish_reason = "error"
+            if r.on_token is not None:
+                r.on_token(None, True)          # no token: the request ended with an error
 
     def stop(self):
         """Safe to call from any thread: run_forever returns after its current step."""

@@ -60,6 +60,9 @@ async def stream(r, events, engine):
     try:
         while not done:
             token_id, done = await events.get()
+            if token_id is None:    # the engine died: end the stream instead of hanging
+                yield sse(r.id, "", "error")
+                break
             text = detok.push(token_id)
             if done:
                 text += detok.flush()
@@ -81,8 +84,9 @@ async def completions(body: CompletionRequest):
     loop = asyncio.get_running_loop()
     events = asyncio.Queue()
     
-    def on_token(token_id, done):   # runs on the engine thread
-        timer.token(done)
+    def on_token(token_id, done):   # runs on the engine thread; token_id None = engine error
+        if token_id is not None:
+            timer.token(done)
         loop.call_soon_threadsafe(events.put_nowait, (token_id, done))
 
     stop = [body.stop] if isinstance(body.stop, str) else (body.stop or [])
@@ -94,6 +98,8 @@ async def completions(body: CompletionRequest):
         engine.add_request(r)
     except ValueError as e:         # prompt too long or other errors
         raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:       # the engine thread died
+        raise HTTPException(status_code=503, detail=str(e))
     return StreamingResponse(stream(r, events, engine),
                              media_type="text/event-stream")
 

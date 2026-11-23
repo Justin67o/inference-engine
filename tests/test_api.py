@@ -151,3 +151,34 @@ def test_client_disconnect_aborts_and_frees_the_blocks(engine, server_url, monke
     assert r.finish_reason == "abort" and r.block_table == [] and len(r.output_ids) < 50
     bm = engine.scheduler.blocks
     wait_until(lambda: len(bm.free) == bm.num_blocks and not engine.scheduler.running)
+
+
+def test_engine_crash_ends_the_stream_and_returns_503(tiny_model, monkeypatch):
+    eng = Engine(tiny_model, EngineConfig(max_num_seqs=4, max_num_batched_tokens=64,
+                                          max_model_len=64), tokenizer=TOK)
+    calls, step = [], eng.step
+
+    def crashing_step():
+        calls.append(1)
+        if len(calls) == 4:
+            raise RuntimeError("CUDA error: unknown error")
+        return step()
+
+    def run():
+        with pytest.raises(RuntimeError, match="CUDA"):     # keep the re-raise out of pytest's thread hook
+            eng.run_forever()
+
+    eng.step = crashing_step
+    thread = threading.Thread(target=run, daemon=True)
+    monkeypatch.setattr(app.state, "engine", eng, raising=False)
+    monkeypatch.setattr(app.state, "thread", thread, raising=False)
+    thread.start()
+    client = TestClient(app)
+
+    chunks = sse_chunks(client.post("/v1/completions", json={"prompt": "ab", "max_tokens": 20}))
+    assert chunks[-1]["choices"][0]["finish_reason"] == "error"
+    assert len(chunks) < 20                     # it ended early instead of hanging
+    thread.join(timeout=10)
+    assert client.get("/health").status_code == 503
+    resp = client.post("/v1/completions", json={"prompt": "ab", "max_tokens": 5})
+    assert resp.status_code == 503 and "engine stopped" in resp.json()["detail"]
