@@ -20,7 +20,7 @@ class EngineConfig:
 
     @classmethod
     def from_env(cls):
-        """The defaults, overriden by ENGINE_<FIELD> environment variables,
+        """The defaults, overridden by ENGINE_<FIELD> environment variables,
         e.g. ENGINE_MAX_NUM_BATCHED_TOKENS=256"""
         overrides = {}
         for f in fields(cls):
