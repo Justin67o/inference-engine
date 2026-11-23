@@ -39,9 +39,10 @@ def models():
             gc.collect()
             torch.cuda.empty_cache()
 
-            # Eager attention: HF's default (SDPA) orders its operations differently
+            # SDPA, the same kernel as prefill in engine/attention/paged.py; eager rounds
+            # differently in bf16 and flips near-tied greedy tokens
             ref = AutoModelForCausalLM.from_pretrained(
-                MODEL, dtype=dtype, attn_implementation="eager").cuda().eval()
+                MODEL, dtype=dtype, attn_implementation="sdpa").cuda().eval()
             mine, _ = load_model(MODEL, dtype=dtype)
             loaded[dtype] = (ref, mine)
 

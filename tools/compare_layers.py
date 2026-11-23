@@ -35,7 +35,7 @@ def main():
 
     mine, cfg = load_model(args.model, dtype=dtype)
     ref = AutoModelForCausalLM.from_pretrained(
-        args.model, dtype=dtype, attn_implementation="eager").cuda().eval()
+        args.model, dtype=dtype, attn_implementation="sdpa").cuda().eval()
     tok = AutoTokenizer.from_pretrained(args.model)
 
     # Module names match HF's once "model." is stripped, so one list serves both
