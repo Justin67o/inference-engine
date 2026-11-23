@@ -4,6 +4,11 @@ from torch import nn
 
 from engine.attention.paged import decode_attention, prefill_attention
 
+try:
+    from engine.attention.triton_paged import paged_decode_attention
+except ImportError:     # CPU-only PyTorch (CI) has no Triton
+    paged_decode_attention = None
+
 
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps):
@@ -54,7 +59,8 @@ class Attention(nn.Module):
 
         if batch is not None:       # decodes
             rows, tables, lens, M = batch
-            out[rows] = decode_attention(q[rows], cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
+            decode = paged_decode_attention if x.is_cuda and paged_decode_attention else decode_attention
+            out[rows] = decode(q[rows], cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
         return self.o_proj(out)
     
 
