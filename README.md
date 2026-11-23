@@ -27,8 +27,8 @@ An ablation chart will show the throughput gained at each milestone.
 - [x] **M0:** Benchmark harness and Hugging Face baseline
 - [x] **M1:** Llama-style transformer written from scratch, matching Hugging Face outputs
 - [x] **M2:** KV cache with separate prefill and decode
-- [ ] **M3:** Continuous batching behind an OpenAI-compatible streaming API
-- [ ] **M4:** Paged KV cache with block tables and preemption
+- [x] **M3:** Continuous batching behind an OpenAI-compatible streaming API
+- [x] **M4:** Paged KV cache with block tables and preemption
 - [ ] **M5:** Speculative decoding (greedy and exact rejection sampling)
 - [ ] **M6:** Profiling-driven optimizations (CUDA graphs, prefix caching or chunked prefill)
 
