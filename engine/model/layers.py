@@ -2,8 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from engine.attention.paged import prefill_attention
-from engine.attention.reference import attend
+from engine.attention.paged import decode_attention, prefill_attention
 
 
 class RMSNorm(nn.Module):
@@ -40,22 +39,24 @@ class Attention(nn.Module):
         self.v_proj = nn.Linear(cfg.hidden_size, self.kv_h * self.d, bias=bias)
         self.o_proj = nn.Linear(self.h * self.d, cfg.hidden_size, bias=False)
 
-    def forward(self, x, cos, sin, segments, layer, cache, write, ctx):                            # x: [N, hidden]
+    def forward(self, x, cos, sin, segments, layer, cache, write, batch):                            # x: [N, hidden]
         N = x.shape[0]
         q = apply_rope(self.q_proj(x).view(N, self.h, self.d), cos, sin)
         k = apply_rope(self.k_proj(x).view(N, self.kv_h, self.d), cos, sin)
         v = self.v_proj(x).view(N, self.kv_h, self.d)
-        cache.write(layer, write, k, v)     # prefill still writes, so later decodes can read
-        outs, i = [], 0
-
-        for s, c in zip(segments, ctx):
-            if s.start == 0:    # prefill, attend over this step's own KV
-                outs.append(prefill_attention(q[i:i + s.n], k[i:i + s.n], v[i:i + s.n]))
-            else:               # decode, stays on the cache until the batched gather
-                q_pos = torch.arange(s.start, s.start + s.n, device=x.device)
-                outs.append(attend(q[i:i + s.n], cache.k[layer, c], cache.v[layer, c], q_pos))
+        cache.write(layer, write, k, v)     # before the gather, so each decode sees its own token
+        out = torch.empty(N, self.h * self.d, device=x.device, dtype=x.dtype)
+        i = 0
+        for s in segments:      
+            if s.start == 0:    # prefills, one SDPA call each, on this step's KV
+                out[i:i + s.n] = prefill_attention(q[i:i + s.n], k[i:i + s.n], v[i:i + s.n])
             i += s.n
-        return self.o_proj(torch.cat(outs))
+
+        if batch is not None:       # decodes
+            rows, tables, lens, M = batch
+            out[rows] = decode_attention(q[rows], cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
+        return self.o_proj(out)
+    
 
 class MLP(nn.Module):
     def __init__(self, cfg):
@@ -74,7 +75,7 @@ class DecoderLayer(nn.Module):
         self.self_attn = Attention(cfg)
         self.post_attention_layernorm = RMSNorm(cfg.hidden_size, cfg.rms_norm_eps)
         self.mlp = MLP(cfg)
-    def forward(self, x, cos, sin, segments, layer, cache, write, ctx):
-        x = x + self.self_attn(self.input_layernorm(x), cos, sin, segments, layer, cache, write, ctx)
+    def forward(self, x, cos, sin, segments, layer, cache, write, batch):
+        x = x + self.self_attn(self.input_layernorm(x), cos, sin, segments, layer, cache, write, batch)
         return x + self.mlp(self.post_attention_layernorm(x))
 

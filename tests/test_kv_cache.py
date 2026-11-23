@@ -143,7 +143,7 @@ def test_forward_one_segment_matches_part4(cfg, dtype):
     slots = torch.arange(T)                              # table [0, 1]: slot = position
 
     with torch.inference_mode():
-        actual = attn(x, cos, sin, [Segment([0, 1], start=0, n=T)], layer, cache, slots, [slots])
+        actual = attn(x, cos, sin, [Segment([0, 1], start=0, n=T)], layer, cache, slots, None)
         expected = attention(attn, x, cos, sin)
         _, k, v = qkv(attn, x, cos, sin)
 
@@ -168,9 +168,9 @@ def test_forward_two_segments_match_each_alone(cfg, dtype):
     sa, sb = torch.arange(7), torch.arange(16, 19)       # A in block 0, B in block 1
     with torch.inference_mode():
         both = attn(torch.cat([xa, xb]), cos, sin, [Segment([0], 0, 7), Segment([1], 0, 3)],
-                    0, new_cache(), torch.cat([sa, sb]), [sa, sb])
-        a = attn(xa, cos[:7], sin[:7], [Segment([0], 0, 7)], 0, new_cache(), sa, [sa])
-        b = attn(xb, cos[7:], sin[7:], [Segment([1], 0, 3)], 0, new_cache(), sb, [sb])
+                    0, new_cache(), torch.cat([sa, sb]), None)
+        a = attn(xa, cos[:7], sin[:7], [Segment([0], 0, 7)], 0, new_cache(), sa, None)
+        b = attn(xb, cos[7:], sin[7:], [Segment([1], 0, 3)], 0, new_cache(), sb, None)
 
     torch.testing.assert_close(both, torch.cat([a, b]))
 

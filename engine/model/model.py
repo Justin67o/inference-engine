@@ -23,10 +23,23 @@ class Model(nn.Module):
                                 self.cfg.rope_parameters["rope_theta"], x.dtype)
         # where each new token's K/V goes, for the whole step at once
         write = torch.tensor([sl for s in segments for sl in slot_ids(s.table, s.start, s.n, bs)], device=dev)
-        # stopgap until paged.py: each segment's whole context, in position order
-        ctx = [torch.tensor(slot_ids(s.table, 0, s.start + s.n, bs), device=dev) for s in segments]
+        # decode segments, batched once per step for every layer's gather
+        dec, rows, i = [], [], 0
+
+        for s in segments:
+            if s.start > 0:
+                assert s.n == 1, "no chunked prefill: a segment with start > 0 is a decode"
+                dec.append(s); rows.append(i)
+            i += s.n
+
+        batch = None
+        if dec:
+            width = max(len(s.table) for s in dec)
+            tables = torch.tensor([s.table + [0] * (width - len(s.table)) for s in dec], device=dev)
+            lens = [s.start + 1 for s in dec]
+            batch = (torch.tensor(rows, device=dev), tables, torch.tensor(lens, device=dev), max(lens))
         for i, layer in enumerate(self.layers):
-            x = layer(x, cos, sin, segments, i, cache, write, ctx) 
+            x = layer(x, cos, sin, segments, i, cache, write, batch) 
         last = torch.tensor([s.n for s in segments]).cumsum(0) - 1 # each segment's last row in x
         return self.lm_head(self.norm(x[last.to(x.device)]))               # [num_segments, vocab]
 
