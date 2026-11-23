@@ -147,7 +147,8 @@ def test_forward_one_segment_matches_part4(cfg, dtype):
         expected = attention(attn, x, cos, sin)
         _, k, v = qkv(attn, x, cos, sin)
 
-    assert torch.equal(actual, expected), (actual - expected).abs().max().item()
+    tol = {} if dtype == torch.float32 else {"atol": 1e-2, "rtol": 1.6e-2}   # SDPA rounds differently from Part 4
+    torch.testing.assert_close(actual, expected, **tol)
     assert torch.equal(cache.k[layer, slots], k)         # this layer's rows were written
     assert torch.equal(cache.v[layer, slots], v)
 
