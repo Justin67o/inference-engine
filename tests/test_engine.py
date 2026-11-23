@@ -1,3 +1,4 @@
+import random
 import threading
 
 import pytest
@@ -264,3 +265,61 @@ def test_preemption_does_not_change_outputs(tiny_model):
     for r, p in zip(reqs, ps):
         assert r.output_ids == alone(tiny_model, p, 30)
     assert_no_leaks(engine, reqs)
+
+
+class RandomModel:
+    """Stands in for the model: random logits, no cache. Leaks are scheduler and block manager
+    bookkeeping, so the real forward pass would only make 10,000 requests slow.
+    Checks on every call that no two running sequences share a block"""
+
+    embed_tokens = torch.nn.Embedding(1, 1)         # the engine only reads .weight.device
+
+    def __init__(self, seed):
+        self.g = torch.Generator().manual_seed(seed)
+
+    def new_cache(self, num_blocks, block_size):
+        return None
+
+    def __call__(self, ids, segments, cache):
+        owned = [b for s in segments for b in s.table]
+        assert len(owned) == len(set(owned)), "two sequences share a KV block"
+        assert all(len(s.table) * 16 >= s.start + s.n for s in segments), "writes past the table"
+        return torch.randn(len(segments), VOCAB, generator=self.g)
+
+
+def test_10k_requests_leak_no_blocks():
+    rng = random.Random(0)
+    cfg = EngineConfig(max_num_seqs=8, max_num_batched_tokens=64, max_model_len=64)
+    engine = Engine(RandomModel(0), cfg, eos_ids=range(20), tokenizer=LetterTok,
+                    num_blocks=12)                  # tight: 8 seqs * up to 4 blocks, so it preempts
+    s, reqs = engine.scheduler, []
+
+    def new_request(i):
+        n = rng.randint(1, 30)
+        return Request(i, [rng.randrange(VOCAB) for _ in range(n)],
+                       max_tokens=rng.randint(1, 64 - n),
+                       temperature=rng.choice([0.0, 1.0]),
+                       ignore_eos=rng.random() < 0.3,
+                       stop=["xyz"] if rng.random() < 0.2 else [])
+
+    while len(reqs) < 10_000:
+        for _ in range(rng.randint(0, 3)):          # bursty arrivals
+            if len(reqs) == 10_000:
+                break
+            if rng.random() < 0.01:                 # some get rejected and never enter the engine
+                with pytest.raises(ValueError):
+                    engine.add_request(Request(-1, [1] * 60, max_tokens=10))
+                continue
+            r = new_request(len(reqs))
+            engine.add_request(r)
+            reqs.append(r)
+        if reqs and rng.random() < 0.1:             # abort anyone: waiting, running, preempted or done
+            engine.abort_request(rng.choice(reqs[-20:]))
+        engine.step()
+        in_use = sum(len(r.block_table) for r in s.running)
+        assert in_use + len(s.blocks.free) == s.blocks.num_blocks    # catch a leak the step it happens
+
+    engine.run_until_idle()
+    assert_no_leaks(engine, reqs)
+    assert {"stop", "length", "abort"} <= {r.finish_reason for r in reqs}
+    assert s.preemptions > 0                        # otherwise the hard path never ran
