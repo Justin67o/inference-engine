@@ -47,6 +47,18 @@ def server_info(url):
         return None
 
 
+def preemptions(url):
+    """preemptions_total from the server's /metrics, or None (HF baseline, M3)"""
+    try:
+        r = httpx.get(url.replace("/v1/completions", "/metrics"), timeout=5)
+    except httpx.HTTPError:
+        return None
+    for line in r.text.splitlines():
+        if line.startswith("preemptions_total "):
+            return float(line.split()[1])
+    return None
+
+
 async def run(url, prompts, rate_per_s, max_tokens):
     results = []
     limits = httpx.Limits(max_connections=1000)
@@ -90,13 +102,16 @@ def main():
         print(f"warm-up: {args.warmup} done")
     random.seed(args.seed)
 
+    before = preemptions(args.url)
     results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens))
+    after = preemptions(args.url)
     env = get_env() # right after the run, so GPU state is still under load
     metrics = summarize(results)
 
+    engine_stats = {"preemptions": None if before is None or after is None else after - before}
     with open(args.output, "w") as f:
         json.dump({"config": vars(args), "server": server, "metrics": metrics, "env": env,
-                       "results": results}, f, indent=2)
+                       "results": results, "engine_stats": engine_stats}, f, indent=2)
 
     
     print(json.dumps(metrics, indent=2))

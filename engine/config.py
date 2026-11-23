@@ -9,6 +9,7 @@ class EngineConfig:
     max_num_batched_tokens: int = 2048      # cap on tokens per step (prefills + decodes)
     max_model_len: int = 2048               # per-sequence cache length: prompt + max_tokens
     watermark: float = 0.1                  # share of KV blocks admission leaves free for decodes to grow
+    num_blocks: int = 0                     # KV blocks of 16 tokens
 
     def __post_init__(self):
         if self.max_num_seqs > self.max_num_batched_tokens:

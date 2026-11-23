@@ -24,7 +24,7 @@ class Engine:
         self.tokenizer = tokenizer          # only needed for stop strings
         bs = 16
         if num_blocks is None:
-            num_blocks = cfg.max_num_seqs * -(-cfg.max_model_len // bs)
+            num_blocks = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // bs)
         self.cache = model.new_cache(num_blocks, bs)
         self.scheduler = Scheduler(cfg, BlockManager(num_blocks, bs))
 
