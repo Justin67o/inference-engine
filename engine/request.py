@@ -20,7 +20,7 @@ class Request:
     finish_reason: str | None = None    # "stop" or "length" once FINISHED
     output_ids: list[int] = field(default_factory=list)
     state: State = State.WAITING
-    cache: object = None    # a KVCache from the pool while RUNNING
+    block_table: list[int] = field(default_factory=list)    # physical KV block ids, in order
     generator: object = None # a seeded torch.Generator, made by the engine if the seed is set
     on_token: object = None # callback(token_id, done), called on the engine thread
 

@@ -1,15 +1,15 @@
 import pytest
 
-from engine.cache.kv_cache import CachePool
+from engine.cache.block_manager import BlockManager
 from engine.config import EngineConfig
 from engine.request import Request, State
 from engine.scheduler import Scheduler
 
 
-def make(max_num_seqs=4, max_num_batched_tokens=16, max_model_len=64, pool_size=None):
+def make(max_num_seqs=4, max_num_batched_tokens=16, max_model_len=64, num_blocks=64, block_size=4):
     cfg = EngineConfig(max_num_seqs=max_num_seqs, max_num_batched_tokens=max_num_batched_tokens,
                        max_model_len=max_model_len)
-    return Scheduler(cfg, CachePool(object, pool_size or max_num_seqs))
+    return Scheduler(cfg, BlockManager(num_blocks, block_size))
 
 
 def req(i, prompt_len, max_tokens=8):
@@ -26,7 +26,7 @@ def test_admits_in_arrival_order_with_whole_prompt_prefill():
         s.add(req(i, prompt_len=i + 2))
     segs = s.schedule()
     assert [(r.id, start, n) for r, start, n in segs] == [(0, 0, 2), (1, 0, 3), (2, 0, 4)]
-    assert all(r.state is State.RUNNING and r.cache is not None for r, _, _ in segs)
+    assert all(r.state is State.RUNNING and r.block_table for r, _, _ in segs)
     assert not s.waiting
 
 
@@ -84,26 +84,6 @@ def test_first_come_first_served_no_skipping_ahead():
     assert [r.id for r in s.waiting] == [1, 2]
 
 
-def test_empty_pool_blocks_admission():
-    s = make(max_num_seqs=4, pool_size=1)
-    s.add(req(0, prompt_len=1))
-    s.add(req(1, prompt_len=1))
-    assert ids(s.schedule()) == [0]
-
-
-def test_finish_frees_the_cache_for_the_next_request():
-    s = make(max_num_seqs=4, pool_size=1)
-    s.add(req(0, prompt_len=1))
-    s.add(req(1, prompt_len=1))
-    (r0, _, _), = s.schedule()
-    cache = r0.cache
-    s.finish(r0)
-    assert r0.state is State.FINISHED and r0.cache is None and not s.running
-    (r1, _, _), = s.schedule()
-    assert r1.id == 1 and r1.cache is cache
-    s.finish(r1)
-    assert s.pool.num_free == s.pool.size
-
 
 def test_nothing_to_do_returns_empty():
     assert make().schedule() == []
@@ -114,3 +94,37 @@ def test_add_rejects_requests_that_can_never_run(prompt_len, max_tokens):
     s = make(max_num_batched_tokens=16, max_model_len=64)
     with pytest.raises(ValueError):
         s.add(req(0, prompt_len, max_tokens))
+
+
+def test_out_of_blocks_blocks_admission():
+    s = make(num_blocks=2, block_size=4)
+    s.add(req(0, prompt_len=5, max_tokens=1))     # 2 blocks
+    s.add(req(1, prompt_len=1, max_tokens=1))
+    assert ids(s.schedule()) == [0]
+    assert [r.id for r in s.waiting] == [1]       # left untouched, owns no blocks
+    assert s.waiting[0].block_table == []
+
+
+def test_finish_returns_blocks_for_the_next_request():
+    s = make(num_blocks=2, block_size=4)
+    s.add(req(0, prompt_len=7, max_tokens=1))
+    s.add(req(1, prompt_len=7, max_tokens=1))
+    (r0, _, _), = s.schedule()
+    table = list(r0.block_table)
+    s.finish(r0)
+    assert r0.state is State.FINISHED and r0.block_table == [] and not s.running
+    (r1, _, _), = s.schedule()
+    assert r1.id == 1 and sorted(r1.block_table) == sorted(table)
+    s.finish(r1)
+    assert len(s.blocks.free) == s.blocks.num_blocks
+
+
+def test_running_out_of_blocks_mid_decode_raises():
+    s = make(num_blocks=2, block_size=4)
+    s.add(req(0, prompt_len=4, max_tokens=2))
+    s.add(req(1, prompt_len=4, max_tokens=2))
+    segs = s.schedule()
+    for r, _, _ in segs:
+        r.output_ids.append(7)
+    with pytest.raises(RuntimeError):
+        s.schedule()
