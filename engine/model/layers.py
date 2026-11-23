@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from engine.attention.paged import prefill_attention
 from engine.attention.reference import attend
 
 
@@ -44,12 +45,15 @@ class Attention(nn.Module):
         q = apply_rope(self.q_proj(x).view(N, self.h, self.d), cos, sin)
         k = apply_rope(self.k_proj(x).view(N, self.kv_h, self.d), cos, sin)
         v = self.v_proj(x).view(N, self.kv_h, self.d)
-        cache.write(layer, write, k, v)     # one scatter for every segment, before any read
+        cache.write(layer, write, k, v)     # prefill still writes, so later decodes can read
         outs, i = [], 0
 
         for s, c in zip(segments, ctx):
-            q_pos = torch.arange(s.start, s.start + s.n, device=x.device)
-            outs.append(attend(q[i:i + s.n], cache.k[layer, c], cache.v[layer, c], q_pos))
+            if s.start == 0:    # prefill, attend over this step's own KV
+                outs.append(prefill_attention(q[i:i + s.n], k[i:i + s.n], v[i:i + s.n]))
+            else:               # decode, stays on the cache until the batched gather
+                q_pos = torch.arange(s.start, s.start + s.n, device=x.device)
+                outs.append(attend(q[i:i + s.n], cache.k[layer, c], cache.v[layer, c], q_pos))
             i += s.n
         return self.o_proj(torch.cat(outs))
 
