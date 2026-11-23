@@ -1,3 +1,4 @@
+import os
 import queue
 
 import torch
@@ -31,6 +32,9 @@ class Engine:
 
     @classmethod
     def from_config(cls, cfg):
+        # Before the first CUDA allocation. Decode tensors grow every step; without this the allocator
+        # caches each old size, and under WSL it spills into system RAM instead of freeing (M4-256 crash)
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
         model, _ = load_model(cfg.model)
         eos = GenerationConfig.from_pretrained(cfg.model).eos_token_id  # int or list
         eos_ids = eos if isinstance(eos, list) else [eos]

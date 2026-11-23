@@ -160,7 +160,8 @@ def plot_latency_vs_rate(rows, out_path):
         ax.scatter([r["rate"] for r in runs], [r["e2e_p95"] for r in runs], color=color, alpha=0.3)
 
     ax.set_xlabel("request rate (req/s)")
-    ax.set_ylabel("end-to-end latency (s)")
+    ax.set_yscale("log")          # M3 is 10x slower; linear would flatten everything else
+    ax.set_ylabel("end-to-end latency (s, log scale)")
     ax.set_title("Latency vs request rate")
     ax.grid(alpha=0.3)
     ax.legend()
