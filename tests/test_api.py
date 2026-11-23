@@ -128,7 +128,7 @@ def test_health(client):
 
 
 
-def test_client_disconnect_aborts_and_frees_the_cache(engine, server_url, monkeypatch):
+def test_client_disconnect_aborts_and_frees_the_blocks(engine, server_url, monkeypatch):
     step = engine.step
 
     def slow_step():                            # 50 tokens take 2.5 s: we hang up long before
@@ -148,6 +148,6 @@ def test_client_disconnect_aborts_and_frees_the_cache(engine, server_url, monkey
     wait_until(lambda: aborted)
     r = aborted[0]
     wait_until(lambda: r.state is State.FINISHED)
-    assert r.finish_reason == "abort" and r.cache is None and len(r.output_ids) < 50
-    pool = engine.scheduler.pool
-    wait_until(lambda: pool.num_free == pool.size and not engine.scheduler.running)
+    assert r.finish_reason == "abort" and r.block_table == [] and len(r.output_ids) < 50
+    bm = engine.scheduler.blocks
+    wait_until(lambda: len(bm.free) == bm.num_blocks and not engine.scheduler.running)

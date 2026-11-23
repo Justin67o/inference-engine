@@ -1,7 +1,7 @@
 """Measure peak activation memory during the largest prefill the engine allows"""
 import torch
 
-from engine.cache.kv_cache import Segment
+from engine.cache.kv_cache import fresh
 from engine.config import EngineConfig
 from engine.model.loader import load_model
 
@@ -11,14 +11,14 @@ MiB = 2**20
 @torch.inference_mode()
 def measure_prefill_peak(model, n_tokens):
     """Bytes the forward pass needs on top of what is already allocated (weights, caches)"""
-    cache = model.new_cache(n_tokens)       # allocate before the baseline: not activations
+    cache, seg = fresh(model, n_tokens)       # allocate before the baseline: not activations
     ids = torch.randint(0, model.cfg.vocab_size, (n_tokens,), device="cuda")
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     base_alloc = torch.cuda.memory_allocated()
     base_resv = torch.cuda.memory_reserved()
-    model(ids, [Segment(cache, 0, n_tokens)])
+    model(ids, [seg], cache)
     torch.cuda.synchronize()
     act_alloc = torch.cuda.max_memory_allocated() - base_alloc
     act_resv = torch.cuda.max_memory_reserved() - base_resv

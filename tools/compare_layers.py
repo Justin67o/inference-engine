@@ -8,7 +8,7 @@ import argparse
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from engine.cache.kv_cache import Segment
+from engine.cache.kv_cache import fresh
 from engine.model.loader import load_model
 
 
@@ -50,7 +50,8 @@ def main():
 
     ids = tok(args.prompt, return_tensors="pt").input_ids[0].cuda()
     with torch.inference_mode():
-        mine(ids, [Segment(mine.new_cache(len(ids)), 0, len(ids))])
+        cache, seg = fresh(mine, len(ids))
+        mine(ids, [seg], cache)
         ref(ids[None], logits_to_keep=1)    # HF also projects only the last token
     for h in mine_handles + ref_handles:
         h.remove()

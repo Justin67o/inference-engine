@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from engine.cache.kv_cache import Segment
+from engine.cache.kv_cache import fresh
 
 PROMPTS_FILE = Path(__file__).parent / "prompts_200.jsonl"
 PROMPTS = [json.loads(line)["prompt"] for line in PROMPTS_FILE.read_text().splitlines()]
@@ -22,7 +22,8 @@ def test_fp32_logits_match(models, tok, prompt):
     ids = tok(prompt, return_tensors="pt").input_ids[0].cuda()
 
     with torch.inference_mode():
-        mine_logits = mine(ids, [Segment(mine.new_cache(len(ids)), 0, len(ids))])[0]
+        cache, seg = fresh(mine, len(ids))
+        mine_logits = mine(ids, [seg], cache)[0]
         diff = (ref(ids[None]).logits[0, -1] - mine_logits).abs().max().item()
     assert diff < 1e-3, f"max abs logit diff {diff:.2e}"
 
@@ -50,7 +51,8 @@ def test_bf16_greedy_matches(models, tok, prompt):
         seq, my_logits = ids, []
         for _ in range(len(ref_tokens)): # HF may stop early at EOS
             # Full recompute into a fresh cache eact step: the same shape as HF with use_cache=False
-            logits = mine(seq, [Segment(mine.new_cache(len(seq)), 0, len(seq))])[0]
+            cache, seg = fresh(mine, len(seq))
+            logits = mine(seq, [seg], cache)[0]
             my_logits.append(logits)
             seq = torch.cat([seq, logits.argmax()[None]])
         my_tokens = seq[len(ids):]

@@ -3,7 +3,8 @@ import queue
 import torch
 from transformers import AutoTokenizer, GenerationConfig
 
-from engine.cache.kv_cache import CachePool, Segment
+from engine.cache.block_manager import BlockManager, bytes_per_block, num_blocks_for
+from engine.cache.kv_cache import Segment
 from engine.model.loader import load_model
 from engine.sampler import sample
 from engine.scheduler import Scheduler
@@ -13,16 +14,19 @@ class Engine:
     """Continuous batching: before every step the scheduler picks which sequences run, then one
     forward pass advances each of them by one token. Requests arrive through `inbox`."""
 
-    def __init__(self, model, cfg, eos_ids=(), tokenizer=None):
+    def __init__(self, model, cfg, eos_ids=(), tokenizer=None, num_blocks=None):
         self.model, self.cfg = model, cfg
         self.device = model.embed_tokens.weight.device
-        pool = CachePool(lambda: model.new_cache(cfg.max_model_len), cfg.max_num_seqs)
-        self.scheduler = Scheduler(cfg, pool)
         self.inbox = queue.Queue()          # thread-safe: the server puts, the engine gets
         self.aborts = queue.Queue()         # thread-safe: the server puts, the engine gets
         self._stop = False
         self.eos_ids = set(eos_ids)
         self.tokenizer = tokenizer          # only needed for stop strings
+        bs = 16
+        if num_blocks is None:
+            num_blocks = cfg.max_num_seqs * -(-cfg.max_model_len // bs)
+        self.cache = model.new_cache(num_blocks, bs)
+        self.scheduler = Scheduler(cfg, BlockManager(num_blocks, bs))
 
 
     @classmethod
@@ -54,7 +58,7 @@ class Engine:
         for r, start, n in segs:        # prefill: the whole prompt; decode: newest token
             ids += r.prompt_ids if start == 0 else [r.output_ids[-1]]
         logits = self.model(torch.tensor(ids, device=self.device),
-                            [Segment(r.cache, start, n) for r, start, n in segs])
+                            [Segment(r.block_table, start, n) for r, start, n in segs], self.cache)
 
         reqs = [r for r, _, _ in segs]
         tokens = sample(logits, [r.temperature for r in reqs], [r.top_k for r in reqs],

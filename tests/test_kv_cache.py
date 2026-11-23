@@ -8,7 +8,7 @@ import torch
 from transformers import AutoConfig
 
 from engine.attention.reference import attend
-from engine.cache.kv_cache import CachePool, KVCache, Segment
+from engine.cache.kv_cache import PagedKVCache, Segment, fresh
 from engine.generate import generate
 from engine.model.layers import Attention, apply_rope, rope_cos_sin
 from engine.model.model import Model
@@ -26,7 +26,8 @@ def m1_generate(model, ids):
     seq, gaps = ids, []
 
     for _ in range(MAX_NEW_TOKENS):
-        logits = model(seq, [Segment(model.new_cache(len(seq)), 0, len(seq))])[0]
+        cache, seg = fresh(model, len(seq))
+        logits = model(seq, [seg], cache)[0]
         top = logits.float().topk(2).values
         gaps.append((top[0] - top[1]).item())
         seq = torch.cat([seq, logits.argmax()[None]])
@@ -138,16 +139,17 @@ def test_forward_one_segment_matches_part4(cfg, dtype):
     attn = Attention(cfg).to(dtype)
     x = torch.randn(T, cfg.hidden_size, dtype=dtype)
     cos, sin = rope_cos_sin(torch.arange(T), attn.d, cfg.rope_parameters["rope_theta"], dtype)
-    cache = KVCache(cfg, attn.d, max_len=64, dtype=dtype, device="cpu")
+    cache = PagedKVCache(cfg, attn.d, num_blocks=4, block_size=16, dtype=dtype, device="cpu")
+    slots = torch.arange(T)                              # table [0, 1]: slot = position
 
     with torch.inference_mode():
-        actual = attn(x, cos, sin, [Segment(cache, start=0, n=T)], layer)
+        actual = attn(x, cos, sin, [Segment([0, 1], start=0, n=T)], layer, cache, slots, [slots])
         expected = attention(attn, x, cos, sin)
         _, k, v = qkv(attn, x, cos, sin)
 
     assert torch.equal(actual, expected), (actual - expected).abs().max().item()
-    assert torch.equal(cache.k[layer, :T], k)            # this layer's rows were written
-    assert torch.equal(cache.v[layer, :T], v)
+    assert torch.equal(cache.k[layer, slots], k)         # this layer's rows were written
+    assert torch.equal(cache.v[layer, slots], v)
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
@@ -160,13 +162,14 @@ def test_forward_two_segments_match_each_alone(cfg, dtype):
     cos, sin = rope_cos_sin(pos, attn.d, theta, dtype)
 
     def new_cache():
-        return KVCache(cfg, attn.d, max_len=64, dtype=dtype, device="cpu")
+        return PagedKVCache(cfg, attn.d, num_blocks=2, block_size=16, dtype=dtype, device="cpu")
 
+    sa, sb = torch.arange(7), torch.arange(16, 19)       # A in block 0, B in block 1
     with torch.inference_mode():
-        both = attn(torch.cat([xa, xb]), cos, sin,
-                    [Segment(new_cache(), 0, 7), Segment(new_cache(), 0, 3)], layer=0)
-        a = attn(xa, cos[:7], sin[:7], [Segment(new_cache(), 0, 7)], layer=0)
-        b = attn(xb, cos[7:], sin[7:], [Segment(new_cache(), 0, 3)], layer=0)
+        both = attn(torch.cat([xa, xb]), cos, sin, [Segment([0], 0, 7), Segment([1], 0, 3)],
+                    0, new_cache(), torch.cat([sa, sb]), [sa, sb])
+        a = attn(xa, cos[:7], sin[:7], [Segment([0], 0, 7)], 0, new_cache(), sa, [sa])
+        b = attn(xb, cos[7:], sin[7:], [Segment([1], 0, 3)], 0, new_cache(), sb, [sb])
 
     torch.testing.assert_close(both, torch.cat([a, b]))
 
@@ -184,9 +187,9 @@ def test_model_returns_last_token_logits_per_segment(tiny_model):
     a, b = torch.randint(1000, (7,)), torch.randint(1000, (3,))
 
     with torch.inference_mode():
-        both = m(torch.cat([a, b]), [Segment(m.new_cache(16), 0, 7), Segment(m.new_cache(16), 0, 3)])
-        alone_a = m(a, [Segment(m.new_cache(16), 0, 7)])
-        alone_b = m(b, [Segment(m.new_cache(16), 0, 3)])
+        both = m(torch.cat([a, b]), [Segment([0], 0, 7), Segment([1], 0, 3)], m.new_cache(2))
+        alone_a = m(a, [Segment([0], 0, 7)], m.new_cache(1))
+        alone_b = m(b, [Segment([0], 0, 3)], m.new_cache(1))
 
     assert both.shape == (2, 1000)                     # one row per segment, not per token
     torch.testing.assert_close(both, torch.cat([alone_a, alone_b]))
@@ -194,31 +197,19 @@ def test_model_returns_last_token_logits_per_segment(tiny_model):
 
 def test_model_decode_from_cache_matches_prefill(tiny_model):
     m = tiny_model
-    ids = torch.randint(1000, (8,))
+    ids = torch.randint(1000, (20,))
 
     with torch.inference_mode():
-        full = m(ids, [Segment(m.new_cache(16), 0, 8)])   # all 8 tokens at once
-        cache = m.new_cache(16)
-        m(ids[:7], [Segment(cache, 0, 7)])                # prefill 7 tokens
-        step = m(ids[7:], [Segment(cache, 7, 1)])         # decode the 8th from the cache
+        full = m(ids, [Segment([0, 1], 0, 20)], m.new_cache(2))   # all 20 tokens at once
+        cache = m.new_cache(4)
+        m(ids[:19], [Segment([3, 1], 0, 19)], cache)               # prefill 19 tokens
+        step = m(ids[19:], [Segment([3, 1], 19, 1)], cache)        # decode the 20th: block 1, offset 3
 
     torch.testing.assert_close(step, full)
 
-def test_cache_pool_take_and_give_back():
-    pool = CachePool(object, size=2)
-    a, b = pool.take(), pool.take()
-    assert a is not b and not pool.has_free()
-    pool.give_back(a)
-    assert pool.has_free() and pool.num_free == 1
-    assert pool.take() is a                   # reused, not reallocated
-    pool.give_back(a)
-    pool.give_back(b)
-    assert pool.num_free == pool.size         # nothing leaked
-
-
-def test_cache_pool_rejects_double_give_back():
-    pool = CachePool(object, size=1)
-    c = pool.take()
-    pool.give_back(c)
-    with pytest.raises(ValueError):
-        pool.give_back(c)
+def test_scattered_blocks_match_contiguous(tiny_model):
+    m, ids = tiny_model, torch.randint(1000, (40,))       # 40 tokens = 3 blocks of 16
+    with torch.inference_mode():
+        a = m(ids, [Segment([0, 1, 2], 0, 40)], m.new_cache(8))
+        b = m(ids, [Segment([7, 2, 5], 0, 40)], m.new_cache(8))
+    assert torch.equal(a, b)

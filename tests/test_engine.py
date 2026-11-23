@@ -51,15 +51,15 @@ def test_matches_generate_when_requests_join_mid_run(tiny_model):
         assert r.output_ids == alone(tiny_model, p, r.max_tokens)
 
 
-def test_more_requests_than_seqs_all_finish_and_return_their_caches(tiny_model):
+def test_more_requests_than_seqs_all_finish_and_return_their_blocks(tiny_model):
     engine = make_engine(tiny_model, max_num_seqs=2)
     reqs = [Request(i, p.tolist(), max_tokens=5) for i, p in enumerate(prompts(5, seed=2))]
     for r in reqs:
         engine.add_request(r)
     engine.run_until_idle()
     assert all(r.state is State.FINISHED and len(r.output_ids) == 5 for r in reqs)
-    pool = engine.scheduler.pool
-    assert pool.num_free == pool.size and not engine.scheduler.running
+    bm = engine.scheduler.blocks
+    assert len(bm.free) == bm.num_blocks and not engine.scheduler.running
 
 
 def test_on_token_streams_every_token_and_done_only_at_the_end(tiny_model):
@@ -124,8 +124,8 @@ def run_one(model, p, **kw):
     r = Request(0, p, **kw)
     engine.add_request(r)
     engine.run_until_idle()
-    pool = engine.scheduler.pool
-    assert r.state is State.FINISHED and pool.num_free == pool.size
+    bm = engine.scheduler.blocks
+    assert r.state is State.FINISHED and len(bm.free) == bm.num_blocks
     return r
 
 
@@ -163,7 +163,7 @@ def test_stop_strings_without_tokenizer_are_rejected(tiny_model):
     with pytest.raises(ValueError):
         engine.add_request(Request(0, [1, 2], max_tokens=5, stop=["x"]))
 
-def test_abort_frees_the_cache_and_stops_tokens(tiny_model):
+def test_abort_frees_the_blocks_and_stops_tokens(tiny_model):
     engine, seen = make_engine(tiny_model), []
     p = prompts(1)[0].tolist()
     r = Request(0, p, max_tokens=20, on_token=lambda t, d: seen.append(t))
@@ -171,9 +171,9 @@ def test_abort_frees_the_cache_and_stops_tokens(tiny_model):
     engine.step(); engine.step()                    # prefill + one decode
     engine.abort_request(r)
     engine.run_until_idle()
-    assert len(seen) == 2 and r.finish_reason == "abort" and r.cache is None
-    pool = engine.scheduler.pool
-    assert pool.num_free == pool.size and not engine.scheduler.running
+    assert len(seen) == 2 and r.finish_reason == "abort" and r.block_table == []
+    bm = engine.scheduler.blocks
+    assert len(bm.free) == bm.num_blocks and not engine.scheduler.running
 
 
 def test_abort_while_waiting_never_runs(tiny_model):
@@ -216,14 +216,14 @@ def test_outputs_do_not_depend_on_arrival_order(tiny_model):
 
 def assert_no_leaks(engine, reqs):
     s = engine.scheduler
-    assert s.pool.num_free == s.pool.size
-    assert len({id(c) for c in s.pool.free}) == s.pool.size     # no cache in the pool twice
+    assert len(s.blocks.free) == s.blocks.num_blocks
+    assert len(set(s.blocks.free)) == s.blocks.num_blocks       # no block freed twice
     assert not s.running and not s.waiting
     assert engine.inbox.empty() and engine.aborts.empty()
-    assert all(r.state is State.FINISHED and r.cache is None for r in reqs)
+    assert all(r.state is State.FINISHED and r.block_table == [] for r in reqs)
 
 
-def test_no_leaked_caches_after_every_kind_of_finish(tiny_model):
+def test_no_leaked_blocks_after_every_kind_of_finish(tiny_model):
     ps = prompts(6, seed=9)
     eos = alone(tiny_model, ps[1], 10)[3]
     engine = Engine(tiny_model, EngineConfig(max_num_seqs=2, max_num_batched_tokens=64,
@@ -242,7 +242,7 @@ def test_no_leaked_caches_after_every_kind_of_finish(tiny_model):
     assert {"stop", "length", "abort"} <= {r.finish_reason for r in reqs}
     assert_no_leaks(engine, reqs)
 
-    # The returned caches are reused cleanly: a second wave still matches generate
+    # The freed blocks are reused cleanly: a second wave still matches generate
     wave = [Request(i, p.tolist(), max_tokens=8, ignore_eos=True)
             for i, p in enumerate(prompts(4, seed=10))]
     for r in wave:
