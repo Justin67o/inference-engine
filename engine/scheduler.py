@@ -12,6 +12,7 @@ class Scheduler:
         self.waiting = deque()          # arrival order: preempted requests go back to the front
         self.running = []               # admission order: oldest first
         self.watermark = int(cfg.watermark * blocks.num_blocks)
+        self.preemptions = 0            # total evictions (for tests and metrics)
 
     def check(self, r):
         """Raises ValueError for a request that could never run."""
@@ -73,6 +74,7 @@ class Scheduler:
     def preempt(self, r):
         """Frees r's blocks and puts it at the front of the queue. It keeps output_ids, so it
         comes back with a prefill of prompt + output (recompute)"""
+        self.preemptions += 1
         self.running.remove(r)
         self.blocks.release(r)
         r.state = State.WAITING
