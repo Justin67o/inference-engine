@@ -3,7 +3,7 @@ import queue
 import torch
 from transformers import AutoTokenizer, GenerationConfig
 
-from engine.cache.block_manager import BlockManager, bytes_per_block, num_blocks_for
+from engine.cache.block_manager import BlockManager
 from engine.cache.kv_cache import Segment
 from engine.model.loader import load_model
 from engine.sampler import sample
@@ -56,7 +56,7 @@ class Engine:
 
         ids = []
         for r, start, n in segs:        # prefill: the whole prompt; decode: newest token
-            ids += r.prompt_ids if start == 0 else [r.output_ids[-1]]
+            ids += r.prompt_ids + r.output_ids if start == 0 else [r.output_ids[-1]]
         logits = self.model(torch.tensor(ids, device=self.device),
                             [Segment(r.block_table, start, n) for r, start, n in segs], self.cache)
 

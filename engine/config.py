@@ -8,10 +8,13 @@ class EngineConfig:
     max_num_seqs: int = 32                  # cap on RUNNING sequences = caches in the pool
     max_num_batched_tokens: int = 2048      # cap on tokens per step (prefills + decodes)
     max_model_len: int = 2048               # per-sequence cache length: prompt + max_tokens
+    watermark: float = 0.1                  # share of KV blocks admission leaves free for decodes to grow
 
     def __post_init__(self):
         if self.max_num_seqs > self.max_num_batched_tokens:
             raise ValueError("max_num_seqs must be <= max_num_batched_tokens")
+        if not 0 <= self.watermark < 1:
+            raise ValueError("watermark must be between 0 and 1")
 
 
     @classmethod

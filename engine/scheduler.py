@@ -9,16 +9,18 @@ class Scheduler:
 
     def __init__(self, cfg, blocks):
         self.cfg, self.blocks = cfg, blocks
-        self.waiting = deque()          # arrival order: first in, first admitted
-        self.running = []
+        self.waiting = deque()          # arrival order: preempted requests go back to the front
+        self.running = []               # admission order: oldest first
+        self.watermark = int(cfg.watermark * blocks.num_blocks)
 
     def check(self, r):
         """Raises ValueError for a request that could never run."""
-        if len(r.prompt_ids) > self.cfg.max_num_batched_tokens:
-            raise ValueError("prompt is longer than max_num_batched_tokens")
-        if len(r.prompt_ids) + r.max_tokens > self.cfg.max_model_len:
+        total = len(r.prompt_ids) + r.max_tokens
+        if total > self.cfg.max_model_len:
             raise ValueError("prompt + max_tokens is longer than max_model_len")
-        if self.blocks.blocks_for(len(r.prompt_ids) + r.max_tokens) > self.blocks.num_blocks:
+        if total - 1 > self.cfg.max_num_batched_tokens:     # a preempted request re-prefills all but its last token
+            raise ValueError("prompt + max_tokens is longer than max_num_batched_tokens")
+        if self.blocks.blocks_for(total) > self.blocks.num_blocks - self.watermark:
             raise ValueError("request needs more KV blocks than the cache has")
 
     def add(self, r):
@@ -26,26 +28,56 @@ class Scheduler:
         self.waiting.append(r)
 
     def schedule(self):
-        """Returns (request, start, n) for each sequence in this step: decodes first, then prefills."""
+        """Returns (request, start, n) for each sequence in this step: decodes first, then prefills.
+        A decode that can't get a block preempts the newest running sequence, possibly itself"""
 
         segs, budget = [], self.cfg.max_num_batched_tokens
-        for r in self.running:          # every running sequence decodes 1 token
-            if not self.blocks.ensure(r, r.length):
-                raise RuntimeError("out of KV blocks for a running sequence (needs preemption)")
-            segs.append((r, r.length -1, 1))
-            budget -= 1
+        queue, preempted = deque(self.running), False
 
-        while(self.waiting
-              and len(self.running) < self.cfg.max_num_seqs
-              and len(self.waiting[0].prompt_ids) <= budget
-              and self.blocks.ensure(self.waiting[0], len(self.waiting[0].prompt_ids))):
-            r = self.waiting.popleft()
+        while queue:
+            r = queue.popleft()     # oldest first
+
+            while not self.blocks.ensure(r, r.length):
+                victim = queue.pop() if queue else r    # newest first, r itself last
+                self.preempt(victim)
+                preempted = True
+                if victim is r:
+                    break
+            if r.state is State.RUNNING:
+                segs.append((r, r.length - 1, 1))
+                budget -= 1
+
+        if preempted:           # blocks are short, anything admitted now would be evicted
+            return segs
+
+        while self.waiting and len(self.running) < self.cfg.max_num_seqs:
+            r = self.waiting[0]
+            
+            if r.length > budget or not self.can_admit(r):
+                break  
+
+            self.waiting.popleft()
+            self.blocks.ensure(r, r.length)
             r.state = State.RUNNING
-
             self.running.append(r)
-            segs.append((r, 0, len(r.prompt_ids)))      # prefill the whole prompt
-            budget -= len(r.prompt_ids)
+            segs.append((r, 0, r.length))   # prompt, plus any output from before a preemption
+            budget -= r.length
         return segs
+
+
+    def can_admit(self, r):
+        """True if r's prefill fits while leaving watermark free"""
+        return self.blocks.blocks_for(r.length) <= len(self.blocks.free) - self.watermark
+
+
+    def preempt(self, r):
+        """Frees r's blocks and puts it at the front of the queue. It keeps output_ids, so it
+        comes back with a prefill of prompt + output (recompute)"""
+        self.running.remove(r)
+        self.blocks.release(r)
+        r.state = State.WAITING
+        self.waiting.appendleft(r)
+
 
     def finish(self, r):
         r.state = State.FINISHED

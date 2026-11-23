@@ -1,8 +1,9 @@
 from types import SimpleNamespace
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from hypothesis import given, settings, strategies as st
 from engine.cache.block_manager import BlockManager, bytes_per_block, num_blocks_for, slot_ids
 
 QWEN_05B = SimpleNamespace(num_hidden_layers=24, num_key_value_heads=2)

@@ -251,3 +251,16 @@ def test_no_leaked_blocks_after_every_kind_of_finish(tiny_model):
     for r in wave:
         assert r.output_ids == alone(tiny_model, torch.tensor(r.prompt_ids), 8)
     assert_no_leaks(engine, wave)
+
+
+def test_preemption_does_not_change_outputs(tiny_model):
+    ps = prompts(4, seed=9)
+    cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64)
+    engine = Engine(tiny_model, cfg, num_blocks=6)     # 4 seqs * up to 4 blocks: must preempt
+    reqs = [Request(i, p.tolist(), max_tokens=30) for i, p in enumerate(ps)]
+    for r in reqs:
+        engine.add_request(r)
+    engine.run_until_idle()
+    for r, p in zip(reqs, ps):
+        assert r.output_ids == alone(tiny_model, p, 30)
+    assert_no_leaks(engine, reqs)

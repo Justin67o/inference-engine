@@ -58,8 +58,8 @@ def test_max_num_seqs_caps_running():
 
 def test_token_budget_holds_back_a_prompt_that_does_not_fit():
     s = make(max_num_batched_tokens=10)
-    s.add(req(0, prompt_len=6))
-    s.add(req(1, prompt_len=6))                   # 6 + 6 > 10
+    s.add(req(0, prompt_len=6, max_tokens=2))
+    s.add(req(1, prompt_len=6, max_tokens=2))                   # 6 + 6 > 10
     assert ids(s.schedule()) == [0]
     s.running[0].output_ids.append(7)
     assert ids(s.schedule()) == [0, 1]            # 1 decode + 6 prefill = 7 <= 10
@@ -68,18 +68,18 @@ def test_token_budget_holds_back_a_prompt_that_does_not_fit():
 def test_decodes_use_up_budget():
     s = make(max_num_seqs=4, max_num_batched_tokens=6)
     for i in range(3):
-        s.add(req(i, prompt_len=1))
+        s.add(req(i, prompt_len=1, max_tokens=2))
     for r, _, _ in s.schedule():
         r.output_ids.append(7)
-    s.add(req(3, prompt_len=4))                   # 3 decodes + 4 = 7 > 6
+    s.add(req(3, prompt_len=4, max_tokens=2))                   # 3 decodes + 4 = 7 > 6
     assert ids(s.schedule()) == [0, 1, 2]
 
 
 def test_first_come_first_served_no_skipping_ahead():
     s = make(max_num_batched_tokens=10)
-    s.add(req(0, prompt_len=8))
-    s.add(req(1, prompt_len=8))                   # doesn't fit this step
-    s.add(req(2, prompt_len=1))                   # would fit, but must not jump the queue
+    s.add(req(0, prompt_len=8, max_tokens=2))
+    s.add(req(1, prompt_len=8, max_tokens=2))                   # doesn't fit this step
+    s.add(req(2, prompt_len=1, max_tokens=2))                   # would fit, but must not jump the queue
     assert ids(s.schedule()) == [0]
     assert [r.id for r in s.waiting] == [1, 2]
 
@@ -119,12 +119,45 @@ def test_finish_returns_blocks_for_the_next_request():
     assert len(s.blocks.free) == s.blocks.num_blocks
 
 
-def test_running_out_of_blocks_mid_decode_raises():
+def test_out_of_blocks_mid_decode_preempts_the_newest():
     s = make(num_blocks=2, block_size=4)
     s.add(req(0, prompt_len=4, max_tokens=2))
     s.add(req(1, prompt_len=4, max_tokens=2))
-    segs = s.schedule()
-    for r, _, _ in segs:
-        r.output_ids.append(7)
-    with pytest.raises(RuntimeError):
-        s.schedule()
+    r0, r1 = [r for r, _, _ in s.schedule()]      # 1 block each, cache full
+    r0.output_ids.append(7)
+    r1.output_ids.append(7)                       # both need a 2nd block, only one can have it
+    assert s.schedule() == [(r0, 4, 1)]
+    assert r1.state is State.WAITING and r1.block_table == [] and r1.output_ids == [7]
+    assert list(s.waiting) == [r1] and s.running == [r0]
+
+
+def test_preempted_request_re_prefills_prompt_and_output():
+    s = make(num_blocks=2, block_size=4)
+    s.add(req(0, prompt_len=4, max_tokens=2))
+    s.add(req(1, prompt_len=4, max_tokens=2))
+    r0, r1 = [r for r, _, _ in s.schedule()]
+    r0.output_ids.append(7)
+    r1.output_ids.append(7)
+    s.schedule()                                  # r1 preempted
+    s.finish(r0)
+    assert s.schedule() == [(r1, 0, 5)]           # 4 prompt + 1 output, from position 0
+
+
+def test_no_admission_in_a_step_that_preempted():
+    s = make(num_blocks=3, block_size=4)
+    s.add(req(0, prompt_len=4, max_tokens=8))
+    s.add(req(1, prompt_len=8, max_tokens=2))
+    r0, r1 = [r for r, _, _ in s.schedule()]      # 1 + 2 = all 3 blocks
+    r0.output_ids.append(7)                       # length 5: r0 needs a 2nd block
+    r1.output_ids.append(7)
+    s.add(req(2, prompt_len=1, max_tokens=1))
+    assert ids(s.schedule()) == [0]               # r1 evicted (frees 2), r0 takes 1 ...
+    assert [r.id for r in s.waiting] == [1, 2]    # ... and r2 isn't admitted into the spare one
+
+
+def test_watermark_holds_back_admission():
+    cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=16, max_model_len=64, watermark=0.25)
+    s = Scheduler(cfg, BlockManager(8, 4))        # watermark = 2 blocks
+    s.add(req(0, prompt_len=16, max_tokens=1))    # 4 blocks: 8 free - 4 = 4 >= 2, admitted
+    s.add(req(1, prompt_len=12, max_tokens=1))    # 3 blocks: 4 free - 3 = 1 < 2, held back
+    assert ids(s.schedule()) == [0]
