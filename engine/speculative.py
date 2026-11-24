@@ -33,3 +33,14 @@ def verify(p_logits, draft_tokens, q_probs, temperature):
             residual = p[i]
         return draft_tokens[:i] + [torch.multinomial(residual, 1).item()]
     return draft_tokens + [torch.multinomial(p[k], 1).item()]
+
+
+def propose_ngram(tokens, k, n_max=3, n_min=1):
+    """Prompt lookup: find the latest earlier occurrence of the last n tokens (longest n first)
+    and proposes the up to k tokens that followed it. Returns [] when nothing matches"""
+    for n in range(min(n_max, len(tokens) - 1), n_min - 1, -1):
+        tail = tokens[-n:]
+        for i in range(len(tokens) - n - 1, -1, -1):    # latest first, the match must have a follower
+            if tokens[i:i + n] == tail:
+                return tokens[i + n: i + n + k]
+    return []

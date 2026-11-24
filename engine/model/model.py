@@ -24,12 +24,15 @@ class Model(nn.Module):
         # where each new token's K/V goes, for the whole step at once
         write = torch.tensor([sl for s in segments for sl in slot_ids(s.table, s.start, s.n, bs)], device=dev)
         # decode segments, batched once per step for every layer's gather
-        dec, rows, i = [], [], 0
+        dec, rows, chunks, keep, i = [], [], [], [], 0
 
         for s in segments:
-            if s.start > 0:
-                assert s.n == 1, "no chunked prefill: a segment with start > 0 is a decode"
+            if s.start > 0 and s.n == 1:    # decode
                 dec.append(s); rows.append(i)
+            elif s.start > 0:               # verify: n new tokens on a cached prefix
+                slots = torch.tensor(slot_ids(s.table, 0, s.start + s.n, bs), device=dev)
+                chunks.append((i, s.n, slots, torch.arange(s.start, s.start + s.n, device=dev)))
+            keep += range(i, i + s.n) if s.start > 0 else [i + s.n - 1]
             i += s.n
 
         batch = None
@@ -39,10 +42,9 @@ class Model(nn.Module):
             lens = [s.start + 1 for s in dec]
             batch = (torch.tensor(rows, device=dev), tables, torch.tensor(lens, device=dev), max(lens))
         for i, layer in enumerate(self.layers):
-            x = layer(x, cos, sin, segments, i, cache, write, batch) 
-        last = torch.tensor([s.n for s in segments]).cumsum(0) - 1 # each segment's last row in x
-        return self.lm_head(self.norm(x[last.to(x.device)]))               # [num_segments, vocab]
-
+            x = layer(x, cos, sin, segments, i, cache, write, batch, chunks) 
+        return self.lm_head(self.norm(x[torch.tensor(keep, device=dev)]))              
+    
     def new_cache(self, num_blocks, block_size=16):
         w = self.embed_tokens.weight
         return PagedKVCache(self.cfg, self.layers[0].self_attn.d, num_blocks, block_size, w.dtype, w.device)

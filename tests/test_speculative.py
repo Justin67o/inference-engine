@@ -1,6 +1,7 @@
 import torch
 
-from engine.speculative import verify
+from engine.cache.kv_cache import Segment, fresh
+from engine.speculative import propose_ngram, verify
 
 
 def logits(*rows):                      # logits whose softmax is exactly these probability rows
@@ -73,3 +74,31 @@ def test_temperature_is_applied_to_p():
     q = torch.softmax(p_logits[0] / 0.5, -1)        # draft distribution at the same temperature
     for _ in range(200):
         assert verify(p_logits, [0], [q], 0.5)[0] == 0
+
+def test_lookup_proposes_what_followed_the_match():
+    assert propose_ngram([1, 2, 3, 4, 9, 1, 2], k=3) == [3, 4, 9]
+
+def test_lookup_prefers_the_longest_ngram():      # 1-gram [2] would give 7; 2-gram [1, 2] gives 3
+    assert propose_ngram([1, 2, 3, 5, 2, 7, 1, 2], k=1) == [3]
+
+def test_lookup_prefers_the_latest_match():
+    assert propose_ngram([5, 1, 6, 5, 1, 8, 5, 1], k=1) == [8]
+
+def test_lookup_short_near_the_end_and_empty_without_a_match():
+    assert propose_ngram([1, 2, 1], k=5) == [2, 1]
+    assert propose_ngram([1, 2, 3], k=5) == []
+
+
+
+def test_verify_segment_matches_one_token_at_a_time(tiny_model):
+    torch.manual_seed(0)
+    ids = torch.randint(1000, (12,))
+    cache, seg = fresh(tiny_model, 12)
+    tiny_model(ids[:8], [Segment(seg.table, 0, 8)], cache)
+    together = tiny_model(ids[8:], [Segment(seg.table, 8, 4)], cache)          # [4, V]
+    one_by_one = torch.cat([tiny_model(ids[8 + j:9 + j], [Segment(seg.table, 8 + j, 1)], cache)
+                            for j in range(4)])
+    torch.testing.assert_close(together, one_by_one)
+
+
+
