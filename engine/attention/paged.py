@@ -25,9 +25,10 @@ def decode_attention(q, k_cache, v_cache, tables, lens, M, bs):
     slot_idx = tables[:, pos // bs] * bs + pos % bs         # [B, M]
     K = k_cache[slot_idx].transpose(1, 2)                   # [B, kv_h, M, d]
     V = v_cache[slot_idx].transpose(1, 2)
+    pad = pos[None, :] >= lens[:, None]                     # [B, M]
+    V = V.masked_fill(pad[:, None, :, None], 0)
     q = q.view(B, kv_h, h // kv_h, d)                       # group query heads by their KV head (head j uses j // rep)
     scores = (q @ K.transpose(-2, -1)) / math.sqrt(d)       # [B, kv_h, rep, M]
-    pad = pos[None, :] >= lens[:, None]                     # [B, M]
     scores = scores.masked_fill(pad[:, None, None, :], float("-inf"))
     out = torch.softmax(scores.float(), -1).to(q.dtype) @ V # [B, kv_h, rep, d]
     return out.reshape(B, h * d)

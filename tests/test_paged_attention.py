@@ -65,3 +65,13 @@ def test_triton_decode_matches_pytorch(seed, dtype):
     ref = decode_attention(*[a.float() if torch.is_tensor(a) and a.is_floating_point() else a for a in args])
     assert (out.float() - ref).abs().max() < (1e-3 if dtype == torch.float32 else 2e-2)
     
+
+def test_decode_ignores_nan_past_the_context():
+    torch.manual_seed(0)
+    k, v = torch.randn(32, 2, 8), torch.randn(32, 2, 8)
+    k[20:] = v[20:] = float("nan")          # unwritten slots: torch.empty can hold anything
+    q, tables = torch.randn(1, 4, 8), torch.tensor([[0, 1]])
+    padded = decode_attention(q, k, v, tables, torch.tensor([20]), 32, 16)
+    exact = decode_attention(q, k, v, tables, torch.tensor([20]), 20, 16)
+    torch.testing.assert_close(padded, exact)
+    
