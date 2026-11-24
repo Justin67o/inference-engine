@@ -33,6 +33,7 @@ def models():
 
     loaded = {}
 
+
     def load(dtype):
         if dtype not in loaded:
             loaded.clear() # free the other dtype's pair before loading this one
@@ -47,6 +48,14 @@ def models():
             loaded[dtype] = (ref, mine)
 
         return loaded[dtype]
+
+
+    def unload():
+        loaded.clear()
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    load.unload = unload        # for tests that need the whole GPU
     return load
 
 

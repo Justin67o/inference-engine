@@ -1,3 +1,5 @@
+import gc
+
 import pytest
 import torch
 
@@ -159,4 +161,27 @@ def test_rollback_keeps_tables_exactly_the_cached_length(tiny_model):
             assert len(r.block_table) == bm.blocks_for(r.length - 1)
         assert sum(len(r.block_table) for r in running) + len(bm.free) == bm.num_blocks
     assert e.spec_drafted > e.spec_accepted > -1    # rejections happened, so rollback had work
-    
+
+
+def test_draft_cache_shares_the_target_block_ids(tiny_model):
+    cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64)
+    e = Engine(tiny_model, cfg, num_blocks=8, draft=tiny_model)
+    assert e.draft_cache.num_blocks == e.cache.num_blocks == e.scheduler.blocks.num_blocks
+    assert e.draft_cache.k is not e.cache.k                 # separate storage
+
+
+@pytest.mark.gpu
+def test_1_5b_target_loads_beside_0_5b_draft(models, tok):
+    models.unload()
+    cfg = EngineConfig(model="Qwen/Qwen2.5-1.5B-Instruct", draft_model="Qwen/Qwen2.5-0.5B-Instruct")
+    e = Engine.from_config(cfg)
+    for m in (e.model, e.draft):
+        assert m.lm_head.weight.data_ptr() == m.embed_tokens.weight.data_ptr()  # tied, not copied
+    assert e.cache.num_blocks < 4096                         # sized to the GPU, not the default
+    r = Request(0, tok("The capital of France is").input_ids, max_tokens=8)
+    e.add_request(r)
+    e.run_until_idle()
+    assert r.finish_reason in ("stop", "length") and r.output_ids
+    del e
+    gc.collect()
+    torch.cuda.empty_cache()                                 # ~4.7 GB: free it for later GPU tests

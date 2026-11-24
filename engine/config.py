@@ -12,6 +12,7 @@ class EngineConfig:
     num_blocks: int = 0                     # KV blocks of 16 tokens
     num_speculative_tokens: int = 0         # prompt-lookup drafts per decode
     ngram_max: int = 3                      # longest n-gram prompt lookup tries to match
+    draft_model: str = ""                   # "" is prompt lookup
 
     def __post_init__(self):
         if self.max_num_seqs * (1 + self.num_speculative_tokens) > self.max_num_batched_tokens:

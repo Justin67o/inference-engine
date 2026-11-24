@@ -6,20 +6,23 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, GenerationConfig
 
-from engine.cache.block_manager import BlockManager
+from engine.cache.block_manager import BlockManager, bytes_per_block, num_blocks_for
 from engine.cache.kv_cache import Segment
 from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
-from engine.speculative import propose_ngram, verify, rollback
+from engine.speculative import propose_ngram, rollback, verify
+
+ACTIVATION_BYTES = 256 * 2**20  # 1.5B, 2048-token prefill: 156 MiB reserved (scripts/measure_activation.py);
+                                # the rest covers verify logits and sampling
 
 
 class Engine:
     """Continuous batching: before every step the scheduler picks which sequences run, then one
     forward pass advances each of them by one token. Requests arrive through `inbox`."""
 
-    def __init__(self, model, cfg, eos_ids=(), tokenizer=None, num_blocks=None):
+    def __init__(self, model, cfg, eos_ids=(), tokenizer=None, num_blocks=None, draft=None):
         self.model, self.cfg = model, cfg
         self.device = model.embed_tokens.weight.device
         self.inbox = queue.Queue()          # thread-safe: the server puts, the engine gets
@@ -33,6 +36,12 @@ class Engine:
         if num_blocks is None:
             num_blocks = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // bs)
         self.cache = model.new_cache(num_blocks, bs)
+
+        # The draft's K/V lives in its own tensors but uses the target's block ids, so one
+        # BlockManager reserves, preempts, and trims both caches together
+        self.draft = draft
+        self.draft_cache = draft.new_cache(num_blocks, bs) if draft is not None else None
+
         self.scheduler = Scheduler(cfg, BlockManager(num_blocks, bs))
         self.spec_drafted = self.spec_accepted = 0
 
@@ -42,10 +51,30 @@ class Engine:
         # Before the first CUDA allocation. Decode tensors grow every step; without this the allocator
         # caches each old size, and under WSL it spills into system RAM instead of freeing (M4-256 crash)
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-        model, _ = load_model(cfg.model)
+        model, mcfg = load_model(cfg.model)
+        models = [model]
+        draft = None
+
+        if cfg.draft_model:
+            draft, dcfg = load_model(cfg.draft_model)
+            if dcfg.vocab_size != mcfg.vocab_size:
+                raise ValueError("draft and target must share a vocab")
+            models.append(draft)
+
+        # One block id holds K/V in every model's cache. Measure after loading the weights:
+        # Windows and the CUDA context take a varying share of the GPU
+        block_bytes = sum(bytes_per_block(m.cfg, m.layers[0].self_attn.d,
+                                            m.embed_tokens.weight.element_size()) for m in models)
+        free, _ = torch.cuda.mem_get_info()
+        fit = num_blocks_for(free, ACTIVATION_BYTES, block_bytes)
+        want = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // 16)
+        num_blocks = min(want, fit)
+        print(f"KV pool: {num_blocks} blocks ({num_blocks * block_bytes / 2**20:.0f} MiB)")
+
         eos = GenerationConfig.from_pretrained(cfg.model).eos_token_id  # int or list
         eos_ids = eos if isinstance(eos, list) else [eos]
-        return cls(model, cfg, eos_ids, AutoTokenizer.from_pretrained(cfg.model))
+        return cls(model, cfg, eos_ids, AutoTokenizer.from_pretrained(cfg.model),
+                   num_blocks=num_blocks, draft=draft)
 
     def add_request(self, r):
         """Safe to call from any thread. Raises ValueError for a request that could never run."""
