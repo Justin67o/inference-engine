@@ -141,4 +141,22 @@ def test_prompt_lookup_matches_plain_greedy_on_qwen(models, tok):
                        f"spec {tok.decode(s[j:j + 5])!r}"
     assert e.spec_accepted > 0
     print(f"\naccepted {e.spec_accepted}/{e.spec_drafted} = {e.spec_accepted / e.spec_drafted:.0%}")
+
+
+def test_rollback_keeps_tables_exactly_the_cached_length(tiny_model):
+    torch.manual_seed(0)
+    cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64,
+                       num_speculative_tokens=4)
+    e = Engine(tiny_model, cfg)
+    # prompt ends with a repeat, so lookup always drafts; a random model rejects most of it
+    reqs = [Request(i, torch.randint(1000, (5,)).tolist() * 3, max_tokens=30) for i in range(3)]
+    for r in reqs:
+        e.add_request(r)
+    bm = e.scheduler.blocks
+    while e.step():
+        running = e.scheduler.running
+        for r in running:
+            assert len(r.block_table) == bm.blocks_for(r.length - 1)
+        assert sum(len(r.block_table) for r in running) + len(bm.free) == bm.num_blocks
+    assert e.spec_drafted > e.spec_accepted > -1    # rejections happened, so rollback had work
     

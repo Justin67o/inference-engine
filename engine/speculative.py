@@ -44,3 +44,10 @@ def propose_ngram(tokens, k, n_max=3, n_min=1):
             if tokens[i:i + n] == tail:
                 return tokens[i + n: i + n + k]
     return []
+
+
+def rollback(blocks, r):
+    """After a verify step the target cache is valid for r.length - 1 positions: everything but the
+    newest token, which is the next step's input. Rejected drafts' K/V sits past that and gets
+    overwritten next step; free the blocks lying past it"""
+    blocks.trim(r, r.length - 1)

@@ -27,6 +27,12 @@ class BlockManager:
         req.block_table = []        
 
 
+    def trim(self, req, n_tokens):
+        """Shrink req's table to what n_tokens needs, returning the tail blocks to the free list"""
+        keep = self.blocks_for(n_tokens)
+        self.free.extend(req.block_table[keep:])
+        del req.block_table[keep:]
+
 def slot_ids(table, start, n, bs=16):
     """Flat cache slot for each of the n tokens starting at position start"""
     return [table[p // bs] * bs + p % bs for p in range(start, start + n)]

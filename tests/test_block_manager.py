@@ -130,3 +130,15 @@ def test_slot_ids_land_in_owned_blocks(data):
     for p, s in zip(range(start, start + n), slots):
         assert s // bs == table[p // bs]                        # right physical block
         assert s % bs == p % bs                                 # right offset inside it
+
+
+def test_trim_returns_only_blocks_past_the_length():
+    bm = BlockManager(num_blocks=4)
+    s = seq(50)
+    bm.ensure(s, 50)                        # 4 blocks
+    kept = s.block_table[:2]
+    bm.trim(s, 20)                          # 20 tokens need 2
+    assert s.block_table == kept and len(bm.free) == 2
+    bm.trim(s, 20)                          # already the right size: no-op
+    assert len(bm.free) == 2
+    

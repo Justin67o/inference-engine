@@ -12,7 +12,7 @@ from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
-from engine.speculative import propose_ngram, verify
+from engine.speculative import propose_ngram, verify, rollback
 
 
 class Engine:
@@ -108,6 +108,8 @@ class Engine:
                 if done:
                     self.scheduler.finish(r)
                     break
+            if r.state is State.RUNNING:    # finish already released everything
+                rollback(self.scheduler.blocks, r)
         return True
     
 
