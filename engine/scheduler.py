@@ -84,6 +84,7 @@ class Scheduler:
         self.preemptions += 1
         self.running.remove(r)
         self.blocks.release(r)
+        r.draft_len = 0     # the draft's K/V lived in those blocks too
         r.state = State.WAITING
         self.waiting.appendleft(r)
 

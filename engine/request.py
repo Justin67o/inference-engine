@@ -6,7 +6,7 @@ class State(Enum):
     WAITING, RUNNING, FINISHED = range(3)
 
 
-@dataclass
+@dataclass(eq=False)
 class Request:
     id: int
     prompt_ids: list[int]
@@ -23,6 +23,7 @@ class Request:
     block_table: list[int] = field(default_factory=list)    # physical KV block ids, in order
     generator: object = None # a seeded torch.Generator, made by the engine if the seed is set
     on_token: object = None # callback(token_id, done), called on the engine thread
+    draft_len: int = 0      # positions the draft model's cache holds; trails length after a verify
 
 
     @property

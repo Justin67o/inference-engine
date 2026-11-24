@@ -12,7 +12,7 @@ from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
-from engine.speculative import propose_ngram, rollback, verify
+from engine.speculative import draft_loop, propose_ngram, rollback, verify
 
 ACTIVATION_BYTES = 256 * 2**20  # 1.5B, 2048-token prefill: 156 MiB reserved (scripts/measure_activation.py);
                                 # the rest covers verify logits and sampling
@@ -97,18 +97,20 @@ class Engine:
         if not segs:
             return False
 
-        ids, plan = [], []                  # (request, start, n, drafts)
+        drafts = self._draft([r for r, start, _ in segs if start > 0])
+        ids, plan = [], []                  # (request, start, n, drafts, q)
+
         for r, start, n in segs:
             if start == 0:
                 ids += r.prompt_ids + r.output_ids
-                plan.append((r, 0, n, []))
+                plan.append((r, 0, n, [], None))
             else:
-                d = self._draft(r)
+                d, q = drafts.get(r, ([], None))
                 ids += [r.output_ids[-1]] + d
-                plan.append((r, start, 1 + len(d), d))
+                plan.append((r, start, 1 + len(d), d, q))
         logits = self.model(torch.tensor(ids, device=self.device),
-                            [Segment(r.block_table, s, n) for r, s, n, _ in plan], self.cache)
-        parts = logits.split([n if s > 0 else 1 for _, s, n, _ in plan])
+                            [Segment(r.block_table, s, n) for r, s, n, *_ in plan], self.cache)
+        parts = logits.split([n if s > 0 else 1 for _, s, n, *_ in plan])
 
         out = [None] * len(plan)
         plain = [i for i, p in enumerate(plan) if not p[3]]     # prefills and undrafted decodes
@@ -119,10 +121,13 @@ class Engine:
                           [r.generator for r in reqs]).tolist()
             for i, t in zip(plain, toks):
                 out[i] = [t]
-        for i, (r, _, _, d) in enumerate(plan):
+        for i, (r, _, _, d, q) in enumerate(plan):
             if d:
-                q = None if r.temperature == 0 else F.one_hot(
-                    torch.tensor(d, device=self.device), logits.shape[-1]).float()
+                if r.temperature == 0:
+                    q = None
+                elif q is None:
+                    q = F.one_hot(
+                        torch.tensor(d, device=self.device), logits.shape[-1]).float()
                 out[i] = verify(parts[i], d, q, r.temperature)
                 self.spec_drafted += len(d)
                 self.spec_accepted += len(out[i]) - 1
@@ -153,12 +158,20 @@ class Engine:
         return None
 
 
-    def _draft(self, r):
-        """Prompt-lookup drafts for r; [] when off, or when verify can't be exact for r"""
-        k = self.scheduler.lookahead(r)
-        if k == 0 or (r.temperature > 0 and (r.top_k > 0 or r.top_p < 1.0 or r.generator is not None)):
-            return []           # verify samples the plain softmax with the global RNG
-        return propose_ngram(r.prompt_ids + r.output_ids, k, self.cfg.ngram_max)
+    def _draft(self, decodes):
+        """{r: (drafts, q)} for the decoding requests. q is the draft's [k, V] probabibilities, or
+        None for prompt lookup. Requests with no room, or that veryify can't get exact, are none"""
+        work = []
+        for r in decodes:
+            k = self.scheduler.lookahead(r)
+            exact = r.temperature == 0 or (r.top_k == 0 and r.top_p == 1.0 and r.generator is None)
+            if k and exact:
+                work.append((r, k))
+        if self.draft is not None:
+            return draft_loop(self.draft, self.draft_cache, work, self.device) if work else {}
+        
+        return {r: (propose_ngram(r.prompt_ids + r.output_ids, k, self.cfg.ngram_max), None)
+                for r, k in work}
 
     
     def _hit_stop_string(self, r):

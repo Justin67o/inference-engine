@@ -1,3 +1,4 @@
+import copy
 import gc
 
 import pytest
@@ -6,6 +7,7 @@ import torch
 from engine.cache.kv_cache import Segment, fresh
 from engine.config import EngineConfig
 from engine.engine import Engine
+from engine.model.model import Model
 from engine.request import Request
 from engine.speculative import propose_ngram, verify
 
@@ -185,3 +187,35 @@ def test_1_5b_target_loads_beside_0_5b_draft(models, tok):
     del e
     gc.collect()
     torch.cuda.empty_cache()                                 # ~4.7 GB: free it for later GPU tests
+
+
+def run_tiny(model, k, draft=None, reqs_ids=None):
+    cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64,
+                       num_speculative_tokens=k)
+    e = Engine(model, cfg, draft=draft)
+    reqs = [Request(i, p, max_tokens=30) for i, p in enumerate(reqs_ids)]
+    for r in reqs:
+        e.add_request(r)
+    e.run_until_idle()
+    return [r.output_ids for r in reqs], e
+
+
+def test_target_as_its_own_draft_accepts_everything(tiny_model):
+    torch.manual_seed(0)
+    ids = [torch.randint(1000, (n,)).tolist() for n in (5, 9, 17)]
+    plain, _ = run_tiny(tiny_model, 0, reqs_ids=ids)
+    spec, e = run_tiny(tiny_model, 4, draft=tiny_model, reqs_ids=ids)
+    assert spec == plain
+    assert e.spec_accepted == e.spec_drafted > 0     # any stale draft K/V would cause a rejection
+
+
+def test_different_draft_still_matches_greedy(tiny_model):
+    cfg = copy.deepcopy(tiny_model.cfg)
+    torch.manual_seed(1)
+    other = Model(cfg).eval()                         # different weights: most drafts are rejected
+    torch.manual_seed(0)
+    ids = [torch.randint(1000, (n,)).tolist() for n in (5, 9, 17)]
+    plain, _ = run_tiny(tiny_model, 0, reqs_ids=ids)
+    spec, e = run_tiny(tiny_model, 4, draft=other, reqs_ids=ids)
+    assert spec == plain
+    assert e.spec_drafted > e.spec_accepted           # truncation had work to do

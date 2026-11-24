@@ -1,3 +1,5 @@
+from engine.cache.kv_cache import Segment
+
 import torch
 
 
@@ -49,5 +51,55 @@ def propose_ngram(tokens, k, n_max=3, n_min=1):
 def rollback(blocks, r):
     """After a verify step the target cache is valid for r.length - 1 positions: everything but the
     newest token, which is the next step's input. Rejected drafts' K/V sits past that and gets
-    overwritten next step; free the blocks lying past it"""
+    overwritten next step; free the blocks lying past it. The draft cache is valid for the 
+    same prefix at most, drafts past the first rejection are wrong, and aftr a full accept it still
+    lacks the last draft"""
     blocks.trim(r, r.length - 1)
+    r.draft_len = min(r.draft_len, r.length - 1)
+
+
+def sample_draft(logits, temps):
+    """One draft token per row: argmax when greedy, else a sample from softmax(logits / T).
+    Returns the tokens [n] and the distributions they came from [n, V], unused when greedy"""
+    t = torch.tensor(temps, device=logits.device).unsqueeze(1)
+    probs = torch.softmax(logits.float() / t.clamp(min=1e-6), -1)
+    toks = torch.where(t.squeeze(1) == 0, logits.argmax(-1), torch.multinomial(probs, 1).squeeze(1))
+    return toks, probs
+
+
+def draft_loop(model, cache, work, device):
+    """work: (request, k) pairs, k >= 1. A catch-up pass feeds each request every accepted token
+    its draft cache lacks, then k - 1 one-token passes feed the drafts back. The last draft is never
+    fed, so each request ends with r.length + k - 1 cached positions.
+    Returns {r: (k draft tokens, [k, V] draft probabibilities)}"""
+
+    toks = {r: [] for r, _ in work}
+    probs = {r: [] for r, _ in work}
+
+    ids, segs = [], []
+    for r, _ in work:       # catch-up: draft_len ... length - 1, newest token included
+        ids += (r.prompt_ids + r.output_ids)[r.draft_len:]
+        segs.append(Segment(r.block_table, r.draft_len, r.length - r.draft_len))
+        r.draft_len = r.length
+
+    logits = model(torch.tensor(ids, device=device), segs, cache)
+    rows = [s.n if s.start > 0 else 1 for s in segs]    # a prefill returns only its last row
+    last = logits[torch.tensor(rows, device=device).cumsum(0) - 1]
+
+    active = work
+
+    while True:
+        t, p = sample_draft(last, [r.temperature for r, _ in active])
+        for (r, _), ti, pi in zip(active,t.tolist(), p):
+            toks[r].append(ti)
+            probs[r].append(pi)
+        active = [(r, k) for r, k in active if len(toks[r]) < k]
+        if not active:
+            break
+        segs = [Segment(r.block_table, r.draft_len, 1) for r, _ in active]
+        last = model(torch.tensor([toks[r][-1] for r, _ in active], device=device), segs, cache)
+
+        for r, _ in active:
+            r.draft_len += 1
+
+    return {r: (toks[r], torch.stack(probs[r])) for r, _ in work}
