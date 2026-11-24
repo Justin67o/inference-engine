@@ -1,6 +1,10 @@
+import pytest
 import torch
 
 from engine.cache.kv_cache import Segment, fresh
+from engine.config import EngineConfig
+from engine.engine import Engine
+from engine.request import Request
 from engine.speculative import propose_ngram, verify
 
 
@@ -102,3 +106,39 @@ def test_verify_segment_matches_one_token_at_a_time(tiny_model):
 
 
 
+COPY_TEXT = ("The lighthouse keeper wrote the same three lines in his log every night: the wind, "
+             "the sea, and the number of ships that passed. In forty years the third number was "
+             "never zero, and he never missed a night.")
+CHAT = [  # copy tasks: the answer repeats the prompt, so lookup drafts and gets accepted
+    "Repeat the following text exactly, with nothing before or after it:\n\n" + COPY_TEXT,
+    "Fix the spelling and repeat the rest unchanged:\n\n" + COPY_TEXT.replace("night", "nite"),
+]
+RAW = ["def fibonacci(n):\n    ", "List the planets of the solar system in order from the Sun:\n1."]
+
+
+@pytest.mark.gpu
+def test_prompt_lookup_matches_plain_greedy_on_qwen(models, tok):
+    _, mine = models(torch.float32)     # fp32: bf16 rounding would flip near-ties between the two paths
+    ids = [tok(tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
+                                       add_generation_prompt=True)).input_ids for p in CHAT]
+    ids += [tok(p).input_ids for p in RAW]
+
+    def run(k):
+        cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=1024, max_model_len=512,
+                           num_speculative_tokens=k)
+        e = Engine(mine, cfg, eos_ids=[tok.eos_token_id])
+        reqs = [Request(i, p, max_tokens=96) for i, p in enumerate(ids)]
+        for r in reqs:
+            e.add_request(r)
+        e.run_until_idle()
+        return [r.output_ids for r in reqs], e
+
+    plain, _ = run(0)
+    spec, e = run(4)
+    for i, (p, s) in enumerate(zip(plain, spec)):
+        j = next((j for j, (a, b) in enumerate(zip(p, s)) if a != b), min(len(p), len(s)))
+        assert s == p, f"request {i} diverges at token {j}: plain {tok.decode(p[j:j + 5])!r}, " \
+                       f"spec {tok.decode(s[j:j + 5])!r}"
+    assert e.spec_accepted > 0
+    print(f"\naccepted {e.spec_accepted}/{e.spec_drafted} = {e.spec_accepted / e.spec_drafted:.0%}")
+    
