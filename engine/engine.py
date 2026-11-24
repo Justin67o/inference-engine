@@ -12,7 +12,7 @@ from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
-from engine.speculative import draft_loop, propose_ngram, rollback, verify
+from engine.speculative import accept_greedy, draft_loop, propose_ngram, rollback, verify
 
 ACTIVATION_BYTES = 256 * 2**20  # 1.5B, 2048-token prefill: 156 MiB reserved (scripts/measure_activation.py);
                                 # the rest covers verify logits and sampling
@@ -97,7 +97,7 @@ class Engine:
         if not segs:
             return False
 
-        drafts = self._draft([r for r, start, _ in segs if start > 0])
+        drafts = self._draft([(r, n - 1) for r, start, n in segs if start > 0])
         ids, plan = [], []                  # (request, start, n, drafts, q)
 
         for r, start, n in segs:
@@ -121,14 +121,25 @@ class Engine:
                           [r.generator for r in reqs]).tolist()
             for i, t in zip(plain, toks):
                 out[i] = [t]
+
+        greedy = [i for i, p in enumerate(plan) if p[3] and p[0].temperature == 0]
+        if greedy:      # one argmax and one GPU sync for the whole batch
+            rows = torch.cat([parts[i] for i in greedy]).argmax(-1).tolist()
+            at = 0
+
+            for i in greedy:
+                d = plan[i][3]
+                out[i] = accept_greedy(rows[at:at + len(d) + 1], d)
+                at += len(d) + 1
+
         for i, (r, _, _, d, q) in enumerate(plan):
-            if d:
-                if r.temperature == 0:
-                    q = None
-                elif q is None:
-                    q = F.one_hot(
-                        torch.tensor(d, device=self.device), logits.shape[-1]).float()
+            if d and r.temperature > 0:     # sampled verify stays per sequence
+                if q is None:
+                    q = F.one_hot(torch.tensor(d, device=self.device), logits.shape[-1]).float()
                 out[i] = verify(parts[i], d, q, r.temperature)
+
+        for i, (_, _, _, d, _) in enumerate(plan):
+            if d:
                 self.spec_drafted += len(d)
                 self.spec_accepted += len(out[i]) - 1
 
@@ -159,17 +170,15 @@ class Engine:
 
 
     def _draft(self, decodes):
-        """{r: (drafts, q)} for the decoding requests. q is the draft's [k, V] probabibilities, or
-        None for prompt lookup. Requests with no room, or that veryify can't get exact, are none"""
-        work = []
-        for r in decodes:
-            k = self.scheduler.lookahead(r)
-            exact = r.temperature == 0 or (r.top_k == 0 and r.top_p == 1.0 and r.generator is None)
-            if k and exact:
-                work.append((r, k))
+        """decodes: (request, k) pairs, k from the scheduler. Returns {r: (drafts, q)}. q is the
+        draft's [k, V] probabibilities, or None for prompt lookup. Requests with k = 0, or that
+        verify can't get exact, get none"""
+        work = [(r, k) for r, k in decodes if k and (
+            r.temperature == 0 or (r.top_k == 0 and r.top_p == 1.0 and r.generator is None))]
+
         if self.draft is not None:
             return draft_loop(self.draft, self.draft_cache, work, self.device) if work else {}
-        
+
         return {r: (propose_ngram(r.prompt_ids + r.output_ids, k, self.cfg.ngram_max), None)
                 for r, k in work}
 

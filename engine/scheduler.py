@@ -45,14 +45,16 @@ class Scheduler:
             r = queue.popleft()     # oldest first
             k = self.lookahead(r)
 
-            while not self.blocks.ensure(r, r.length + k):
-                victim = queue.pop() if queue else r    # newest first, r itself last
-                self.preempt(victim)
-                preempted = True
-                if victim is r:
-                    break
+            if not self.blocks.ensure(r, r.length + k):
+                k = 0       # drafts are optional, drop before evicting anyone
+                while not self.blocks.ensure(r, r.length + k):
+                    victim = queue.pop() if queue else r    # newest first, r itself last
+                    self.preempt(victim)
+                    preempted = True
+                    if victim is r:
+                        break
             if r.state is State.RUNNING:
-                segs.append((r, r.length - 1, 1))
+                segs.append((r, r.length - 1, 1 + k))       # n is the most tokens r may feed in
                 budget -= 1 + k
 
         if preempted:           # blocks are short, anything admitted now would be evicted

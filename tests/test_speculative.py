@@ -219,3 +219,36 @@ def test_different_draft_still_matches_greedy(tiny_model):
     spec, e = run_tiny(tiny_model, 4, draft=other, reqs_ids=ids)
     assert spec == plain
     assert e.spec_drafted > e.spec_accepted           # truncation had work to do
+
+
+def test_batch_with_diverging_acceptance_matches_plain(tiny_model):
+    other = copy.deepcopy(tiny_model)             # close to the target: some drafts accepted, some not
+    torch.manual_seed(1)
+    with torch.no_grad():
+        for w in other.parameters():
+            w.add_(0.2 * w.std() * torch.randn_like(w))
+    first = [torch.randint(1000, (n,)).tolist() for n in (5, 9, 17)]
+    later = [torch.randint(1000, (n,)).tolist() for n in (3, 12)]
+
+    def run(k):
+        cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64,
+                           num_speculative_tokens=k)
+        e = Engine(tiny_model, cfg, num_blocks=6, draft=other if k else None)
+        reqs = [Request(i, p, max_tokens=m) for i, (p, m) in enumerate(zip(first, (30, 7, 20)))]
+        reqs.append(Request(3, first[0], max_tokens=20, temperature=1.0, seed=5))  # never drafts
+        for r in reqs:
+            e.add_request(r)
+        for _ in range(3):
+            e.step()
+        for i, p in enumerate(later, start=len(reqs)):
+            reqs.append(Request(i, p, max_tokens=25))
+            e.add_request(reqs[-1])
+        e.run_until_idle()
+        assert len(e.scheduler.blocks.free) == e.scheduler.blocks.num_blocks
+        return [r.output_ids for r in reqs], e
+
+    plain, _ = run(0)
+    spec, e = run(4)
+    assert spec == plain
+    assert e.spec_drafted > e.spec_accepted > 0
+    assert e.scheduler.preemptions > 0

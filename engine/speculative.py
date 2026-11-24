@@ -1,6 +1,6 @@
-from engine.cache.kv_cache import Segment
-
 import torch
+
+from engine.cache.kv_cache import Segment
 
 
 def verify(p_logits, draft_tokens, q_probs, temperature):
@@ -16,11 +16,7 @@ def verify(p_logits, draft_tokens, q_probs, temperature):
     k = len(draft_tokens)
 
     if temperature == 0:        # greedy, accept while drafts match argmax
-        target = p_logits.argmax(-1).tolist()
-        for i, t in enumerate(draft_tokens):
-            if t != target[i]:
-                return draft_tokens[:i] + [target[i]]
-        return draft_tokens + [target[k]]
+        return accept_greedy(p_logits.argmax(-1).tolist(), draft_tokens)
 
 
     p = torch.softmax(p_logits.float() / temperature, -1)
@@ -103,3 +99,12 @@ def draft_loop(model, cache, work, device):
             r.draft_len += 1
 
     return {r: (toks[r], torch.stack(probs[r])) for r, _ in work}
+
+
+def accept_greedy(target, draft_tokens):
+    """target: the target's argmax ids, k+1 of them"""
+    for i, t in enumerate(draft_tokens):
+        if t != target[i]:
+            return draft_tokens[:i] + [target[i]]
+        
+    return draft_tokens + [target[len(draft_tokens)]]

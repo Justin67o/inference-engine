@@ -1,3 +1,4 @@
+
 import pytest
 
 from engine.cache.block_manager import BlockManager
@@ -6,9 +7,9 @@ from engine.request import Request, State
 from engine.scheduler import Scheduler
 
 
-def make(max_num_seqs=4, max_num_batched_tokens=16, max_model_len=64, num_blocks=64, block_size=4):
+def make(max_num_seqs=4, max_num_batched_tokens=16, max_model_len=64, num_blocks=64, block_size=4, k=0):
     cfg = EngineConfig(max_num_seqs=max_num_seqs, max_num_batched_tokens=max_num_batched_tokens,
-                       max_model_len=max_model_len)
+                       max_model_len=max_model_len, num_speculative_tokens=k)
     return Scheduler(cfg, BlockManager(num_blocks, block_size))
 
 
@@ -161,3 +162,23 @@ def test_watermark_holds_back_admission():
     s.add(req(0, prompt_len=16, max_tokens=1))    # 4 blocks: 8 free - 4 = 4 >= 2, admitted
     s.add(req(1, prompt_len=12, max_tokens=1))    # 3 blocks: 4 free - 3 = 1 < 2, held back
     assert ids(s.schedule()) == [0]
+
+
+def test_decode_gets_k_drafts_when_blocks_allow():
+    s = make(max_num_batched_tokens=32, k=4)
+    s.add(req(0, prompt_len=4, max_tokens=8))
+    (r, _, _), = s.schedule()
+    r.output_ids.append(7)
+    assert s.schedule() == [(r, 4, 5)]            # 1 input + 4 drafts
+
+
+def test_drafts_are_dropped_before_anyone_is_preempted():
+    s = make(max_num_batched_tokens=32, num_blocks=3, block_size=4, k=4)
+    s.add(req(0, prompt_len=4, max_tokens=8))
+    s.add(req(1, prompt_len=2, max_tokens=2))     # holds a block; no room to draft
+    r0, r1 = [r for r, _, _ in s.schedule()]      # 1 block each, 1 free
+    r0.output_ids.append(7)
+    r1.output_ids.append(7)                       # r0's 4 drafts need 2 more blocks, 1 is free
+    assert s.schedule() == [(r0, 4, 1), (r1, 2, 1)]   # r0 decodes plain, r1 keeps its block
+    assert s.preemptions == 0
+    
