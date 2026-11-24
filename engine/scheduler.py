@@ -28,6 +28,12 @@ class Scheduler:
         self.check(r)
         self.waiting.append(r)
 
+
+    def lookahead(self, r):
+        """Draft room for r: verify returns up to k+1 tokens, so never draft past max_tokens"""
+        return max(0, min(self.cfg.num_speculative_tokens, r.max_tokens - len(r.output_ids) - 1))
+
+    
     def schedule(self):
         """Returns (request, start, n) for each sequence in this step: decodes first, then prefills.
         A decode that can't get a block preempts the newest running sequence, possibly itself"""
@@ -37,8 +43,9 @@ class Scheduler:
 
         while queue:
             r = queue.popleft()     # oldest first
+            k = self.lookahead(r)
 
-            while not self.blocks.ensure(r, r.length):
+            while not self.blocks.ensure(r, r.length + k):
                 victim = queue.pop() if queue else r    # newest first, r itself last
                 self.preempt(victim)
                 preempted = True
@@ -46,7 +53,7 @@ class Scheduler:
                     break
             if r.state is State.RUNNING:
                 segs.append((r, r.length - 1, 1))
-                budget -= 1
+                budget -= 1 + k
 
         if preempted:           # blocks are short, anything admitted now would be evicted
             return segs

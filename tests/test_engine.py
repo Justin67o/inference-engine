@@ -356,3 +356,27 @@ def test_crash_ends_every_request_and_rejects_new_ones(tiny_model):
         assert events[r.id][-1] == (None, True)
     with pytest.raises(RuntimeError, match="engine stopped"):
         eng.add_request(make(4))
+
+
+@pytest.mark.parametrize("mode", ["perfect", "wrong"])
+def test_spec_matches_plain_with_forced_drafts(tiny_model, monkeypatch, mode):
+    ps = [p.tolist() for p in prompts(4, seed=5)]
+    def run(k):
+        e = make_engine(tiny_model, max_num_batched_tokens=64, num_speculative_tokens=k)
+        reqs = [Request(i, p, max_tokens=20) for i, p in enumerate(ps)]
+        for r in reqs: e.add_request(r)
+        e.run_until_idle()
+        return [r.output_ids for r in reqs], e
+    plain, _ = run(0)
+    full = [p + o for p, o in zip(ps, plain)]
+    def oracle(tokens, k, n_max):
+        f = next(f for f in full if f[:len(tokens)] == tokens)
+        d = f[len(tokens):len(tokens) + k]
+        return d if mode == "perfect" else [(t + 1) % VOCAB for t in d]
+    monkeypatch.setattr("engine.engine.propose_ngram", oracle)
+    spec, e = run(4)
+    assert spec == plain
+    assert e.spec_drafted > 0
+    assert e.spec_accepted == (e.spec_drafted if mode == "perfect" else 0)
+    assert len(e.scheduler.blocks.free) == e.scheduler.blocks.num_blocks
+    

@@ -10,10 +10,12 @@ class EngineConfig:
     max_model_len: int = 2048               # per-sequence cache length: prompt + max_tokens
     watermark: float = 0.1                  # share of KV blocks admission leaves free for decodes to grow
     num_blocks: int = 0                     # KV blocks of 16 tokens
+    num_speculative_tokens: int = 0         # prompt-lookup drafts per decode
+    ngram_max: int = 3                      # longest n-gram prompt lookup tries to match
 
     def __post_init__(self):
-        if self.max_num_seqs > self.max_num_batched_tokens:
-            raise ValueError("max_num_seqs must be <= max_num_batched_tokens")
+        if self.max_num_seqs * (1 + self.num_speculative_tokens) > self.max_num_batched_tokens:
+            raise ValueError("max_num_seqs * (1 + num_speculative_tokens) must be <= max_num_batched_tokens")
         if not 0 <= self.watermark < 1:
             raise ValueError("watermark must be between 0 and 1")
 

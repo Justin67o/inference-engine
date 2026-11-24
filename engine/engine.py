@@ -3,6 +3,7 @@ import queue
 import threading
 
 import torch
+import torch.nn.functional as F
 from transformers import AutoTokenizer, GenerationConfig
 
 from engine.cache.block_manager import BlockManager
@@ -11,6 +12,7 @@ from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
 from engine.scheduler import Scheduler
+from engine.speculative import propose_ngram, verify
 
 
 class Engine:
@@ -32,6 +34,7 @@ class Engine:
             num_blocks = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // bs)
         self.cache = model.new_cache(num_blocks, bs)
         self.scheduler = Scheduler(cfg, BlockManager(num_blocks, bs))
+        self.spec_drafted = self.spec_accepted = 0
 
 
     @classmethod
@@ -65,25 +68,48 @@ class Engine:
         if not segs:
             return False
 
-        ids = []
-        for r, start, n in segs:        # prefill: the whole prompt; decode: newest token
-            ids += r.prompt_ids + r.output_ids if start == 0 else [r.output_ids[-1]]
+        ids, plan = [], []                  # (request, start, n, drafts)
+        for r, start, n in segs:
+            if start == 0:
+                ids += r.prompt_ids + r.output_ids
+                plan.append((r, 0, n, []))
+            else:
+                d = self._draft(r)
+                ids += [r.output_ids[-1]] + d
+                plan.append((r, start, 1 + len(d), d))
         logits = self.model(torch.tensor(ids, device=self.device),
-                            [Segment(r.block_table, start, n) for r, start, n in segs], self.cache)
+                            [Segment(r.block_table, s, n) for r, s, n, _ in plan], self.cache)
+        parts = logits.split([n if s > 0 else 1 for _, s, n, _ in plan])
 
-        reqs = [r for r, _, _ in segs]
-        tokens = sample(logits, [r.temperature for r in reqs], [r.top_k for r in reqs],
-                        [r.top_p for r in reqs], [r.generator for r in reqs]).tolist()
+        out = [None] * len(plan)
+        plain = [i for i, p in enumerate(plan) if not p[3]]     # prefills and undrafted decodes
+        if plain:
+            reqs = [plan[i][0] for i in plain]
+            toks = sample(torch.cat([parts[i] for i in plain]), [r.temperature for r in reqs],
+                          [r.top_k for r in reqs], [r.top_p for r in reqs],
+                          [r.generator for r in reqs]).tolist()
+            for i, t in zip(plain, toks):
+                out[i] = [t]
+        for i, (r, _, _, d) in enumerate(plan):
+            if d:
+                q = None if r.temperature == 0 else F.one_hot(
+                    torch.tensor(d, device=self.device), logits.shape[-1]).float()
+                out[i] = verify(parts[i], d, q, r.temperature)
+                self.spec_drafted += len(d)
+                self.spec_accepted += len(out[i]) - 1
 
-        for r, t in zip(reqs, tokens):
-            r.output_ids.append(t)
-            r.finish_reason = self._finish_reason(r, t)
-            done = r.finish_reason is not None
-            if r.on_token is not None:
-                r.on_token(t, done)
-            if done:
-                self.scheduler.finish(r)
+        for (r, *_), toks in zip(plan, out):
+            for t in toks:                  # one at a time, so EOS, stop strings and max_tokens cut mid-run
+                r.output_ids.append(t)
+                r.finish_reason = self._finish_reason(r, t)
+                done = r.finish_reason is not None
+                if r.on_token is not None:
+                    r.on_token(t, done)
+                if done:
+                    self.scheduler.finish(r)
+                    break
         return True
+    
 
     def _finish_reason(self, r, t):
         """Checks the newest token t: returns "stop", "length", or None to keep going."""
@@ -95,6 +121,15 @@ class Engine:
             return "length"
         return None
 
+
+    def _draft(self, r):
+        """Prompt-lookup drafts for r; [] when off, or when verify can't be exact for r"""
+        k = self.scheduler.lookahead(r)
+        if k == 0 or (r.temperature > 0 and (r.top_k > 0 or r.top_p < 1.0 or r.generator is not None)):
+            return []           # verify samples the plain softmax with the global RNG
+        return propose_ngram(r.prompt_ids + r.output_ids, k, self.cfg.ngram_max)
+
+    
     def _hit_stop_string(self, r):
         """Decode only a tail of the output. A character takes at most 4 bytes, so a stop string of
         c characters spans at most 4c byte-level tokens. An earlier match would have stopped us 
