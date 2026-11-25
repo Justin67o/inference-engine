@@ -4,9 +4,13 @@ import gc
 import pytest
 import torch
 
+from collections import Counter
+from scipy.stats import chi2_contingency
+
 from engine.cache.kv_cache import Segment, fresh
 from engine.config import EngineConfig
 from engine.engine import Engine
+from engine.model.loader import load_model
 from engine.model.model import Model
 from engine.request import Request
 from engine.speculative import propose_ngram, verify
@@ -14,6 +18,12 @@ from engine.speculative import propose_ngram, verify
 
 def logits(*rows):                      # logits whose softmax is exactly these probability rows
     return torch.tensor(rows).log()     # log(0) = -inf, so a zero probability stays exactly zero
+
+
+def qwen_prompts(tok):
+    ids = [tok(tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
+                                       add_generation_prompt=True)).input_ids for p in CHAT]
+    return ids + [tok(p).input_ids for p in RAW]
 
 
 # Greedy: the argmax of each row is 1, 0, 3
@@ -147,6 +157,36 @@ def test_prompt_lookup_matches_plain_greedy_on_qwen(models, tok):
     print(f"\naccepted {e.spec_accepted}/{e.spec_drafted} = {e.spec_accepted / e.spec_drafted:.0%}")
 
 
+@pytest.mark.gpu
+def test_sampled_lookup_keeps_the_target_distribution(models, tok):
+    _, mine = models(torch.float32)
+    # the prompt repeats itself, so lookup always has a draft after the first token
+    prompt = tok("My favourite colours are red, blue and green. My favourite colours are").input_ids
+    n = 10_000
+
+    def second_tokens(k):
+        torch.manual_seed(k)
+        cfg = EngineConfig(max_num_seqs=256, max_num_batched_tokens=4096, max_model_len=64,
+                           num_speculative_tokens=k)
+        e = Engine(mine, cfg)                      # no eos_ids: every request runs to max_tokens
+        reqs = [Request(i, prompt, max_tokens=6, temperature=1.0) for i in range(n)]
+        for r in reqs:
+            e.add_request(r)
+        e.run_until_idle()
+        return Counter(r.output_ids[1] for r in reqs), e
+
+    plain, _ = second_tokens(0)
+    spec, e = second_tokens(4)
+    common = [t for t, c in plain.items() if c >= 20]
+    table = [[c[t] for t in common] + [n - sum(c[t] for t in common)] for c in (plain, spec)]
+    if table[0][-1] + table[1][-1] == 0:          # no rare tokens: drop the empty bucket
+        table = [row[:-1] for row in table]
+    pvalue = chi2_contingency(table).pvalue
+    print(f"\n{len(table[0])} buckets, accepted {e.spec_accepted}/{e.spec_drafted}, p = {pvalue:.3f}")
+    assert e.spec_drafted > e.spec_accepted > 0    # drafts made and some rejected: residual exercised
+    assert pvalue > 0.01
+
+
 def test_rollback_keeps_tables_exactly_the_cached_length(tiny_model):
     torch.manual_seed(0)
     cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64,
@@ -252,3 +292,40 @@ def test_batch_with_diverging_acceptance_matches_plain(tiny_model):
     assert spec == plain
     assert e.spec_drafted > e.spec_accepted > 0
     assert e.scheduler.preemptions > 0
+
+
+def top2(model, ids):               # the target's two best next tokens and the logit gap between them
+    cache, seg = fresh(model, len(ids))
+    top = model(torch.tensor(ids, device="cuda"), [seg], cache)[-1].float().topk(2)
+    return top.indices.tolist(), (top.values[0] - top.values[1]).item()
+
+
+@pytest.mark.gpu
+def test_0_5b_draft_matches_plain_greedy_on_1_5b(models, tok):
+    models.unload()
+    target, _ = load_model("Qwen/Qwen2.5-1.5B-Instruct")     # bf16: fp32 1.5B won't fit in 6 GB
+    draft, _ = load_model("Qwen/Qwen2.5-0.5B-Instruct")
+    ids = qwen_prompts(tok)
+
+    def run(k):
+        cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=1024, max_model_len=512,
+                           num_speculative_tokens=k)
+        e = Engine(target, cfg, eos_ids=[tok.eos_token_id], draft=draft if k else None)
+        reqs = [Request(i, p, max_tokens=96) for i, p in enumerate(ids)]
+        for r in reqs:
+            e.add_request(r)
+        e.run_until_idle()
+        return [r.output_ids for r in reqs], e
+
+    plain, _ = run(0)
+    spec, e = run(4)
+    for i, (p, s) in enumerate(zip(plain, spec)):
+        if s == p:
+            continue
+        j = next(j for j, (a, b) in enumerate(zip(p + [-1], s + [-1])) if a != b)
+        best, gap = top2(target, ids[i] + p[:j])     # bf16 rounding may flip only a near-tie
+        pj, sj = (p + [-1])[j], (s + [-1])[j]      # -1: that run had already stopped
+        print(f"\nrequest {i} diverges at token {j}: plain {pj}, spec {sj}, top-2 {best}, gap {gap:.3f}")
+        assert gap < 0.2 and sj in best, f"request {i} diverges at {j} with gap {gap:.3f}: a real bug"
+    assert e.spec_accepted > 0
+    print(f"\naccepted {e.spec_accepted}/{e.spec_drafted} = {e.spec_accepted / e.spec_drafted:.0%}")
