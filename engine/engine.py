@@ -138,10 +138,15 @@ class Engine:
                     q = F.one_hot(torch.tensor(d, device=self.device), logits.shape[-1]).float()
                 out[i] = verify(parts[i], d, q, r.temperature)
 
-        for i, (_, _, _, d, _) in enumerate(plan):
+        for i, (r, _, _, d, _) in enumerate(plan):
             if d:
+                a = len(out[i]) - 1         # drafts accepted; the last token is the correction/bonus
+                r.spec_passes += 1
+                r.spec_drafted += len(d)
+                r.spec_accepted += a
+                r.spec_rejected += a < len(d)
                 self.spec_drafted += len(d)
-                self.spec_accepted += len(out[i]) - 1
+                self.spec_accepted += a
 
         for (r, *_), toks in zip(plan, out):
             for t in toks:                  # one at a time, so EOS, stop strings and max_tokens cut mid-run

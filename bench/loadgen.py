@@ -12,11 +12,12 @@ from bench.metrics import summarize
 
 
 async def one_request(client, url, prompt, max_tokens, results):
-    sent, token_times, ok = time.perf_counter(), [], False
+    sent, token_times, ok, spec = time.perf_counter(), [], False, None
     body = {"prompt": prompt, 
             "max_tokens": max_tokens, 
             "ignore_eos": True,     # exactly max_tokens, like the HF baseline's min_new_tokens
             "stream": True}
+    
     try:
         async with client.stream("POST", url, json=body) as response:
             ok = response.status_code == 200
@@ -30,6 +31,8 @@ async def one_request(client, url, prompt, max_tokens, results):
                         print("Error: the server ended the request with an error")
                     else:
                         token_times.append(time.perf_counter())
+                        chunk = json.loads(line[6:])
+                        spec = chunk.get("spec", spec)
     except httpx.HTTPError as e:    # dropped connection, or no data for --read-timeout seconds
         ok = False
         print(f"Error: {type(e).__name__}: {e}")
@@ -39,7 +42,8 @@ async def one_request(client, url, prompt, max_tokens, results):
     results.append({"sent": sent, 
                     "token_times": token_times,
                     "n": max_tokens,
-                    "ok": ok
+                    "ok": ok,
+                    "spec": spec,
                     })
 
 

@@ -12,20 +12,26 @@ TPOT = Histogram("tpot_seconds", "Mean time per output token after the first",
                  buckets=(.005, .01, .02, .03, .05, .075, .1, .25, .5, 1))
 KV_FREE = Gauge("kv_free_blocks", "KV cache blocks not owned by any sequence")
 KV_TOTAL = Gauge("kv_total_blocks", "KV cache blocks in the pool")
+SPEC_RATE = Histogram("spec_acceptance_rate", "Per request: accepted / drafted draft tokens",
+                      buckets=(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1))
 
 
-class _SchedulerCollector:
-    """Reports scheduler.preemptions as a counter at scrape time. Counter has no set_function"""
-
-    scheduler = None        # set by watch()
-
+class _EngineCollector:
+    engine = None
     def collect(self):
-        if self.scheduler is not None:
+        e = self.engine
+        if e is not None:
             yield CounterMetricFamily("preemptions", "Sequences evicted to free KV blocks",
-                                      value=self.scheduler.preemptions)
+                                      value=e.scheduler.preemptions)
+            yield CounterMetricFamily("spec_draft_tokens", "Draft tokens sent for verification",
+                                      value=e.spec_drafted)
+            yield CounterMetricFamily("spec_accepted_tokens", "Draft tokens the target accepted",
+                                      value=e.spec_accepted)
+            
 
 
-_COLLECTOR = _SchedulerCollector()
+
+_COLLECTOR = _EngineCollector()
 REGISTRY.register(_COLLECTOR)
 
 
@@ -35,7 +41,7 @@ def watch(engine):
     RUNNING.set_function(lambda: len(engine.scheduler.running))
     KV_FREE.set_function(lambda: len(engine.scheduler.blocks.free))
     KV_TOTAL.set_function(lambda: engine.scheduler.blocks.num_blocks)
-    _COLLECTOR.scheduler = engine.scheduler
+    _COLLECTOR.engine = engine
 
 
 class RequestTimer:
@@ -55,3 +61,9 @@ class RequestTimer:
             TTFT.observe(now - self.start)
         if done and self.n > 1:         # TPOT is undefined for a 1-token output
             TPOT.observe((now- self.first) / (self.n - 1))
+
+
+    def finish(self, r):
+        if r.spec_drafted:
+            SPEC_RATE.observe(r.spec_accepted / r.spec_drafted)
+    

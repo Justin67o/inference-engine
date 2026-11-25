@@ -47,9 +47,12 @@ class CompletionRequest(BaseModel):
     ignore_eos: bool = False
     stream: bool = True
 
-def sse(rid, text, finish_reason):
+def sse(rid, text, finish_reason, extra=None):
     chunk = {"id": f"cmpl-{rid}", "object": "text_completion",
              "choices": [{"index": 0, "text": text, "finish_reason": finish_reason}]}
+
+    if extra:
+        chunk.update(extra)
     return f"data: {json.dumps(chunk)}\n\n"
 
 
@@ -70,7 +73,11 @@ async def stream(r, events, engine):
             if done:
                 text += stops.flush()
             if text or done:        # a half-finished emoji yields "": don't send anything
-                yield sse(r.id, text, r.finish_reason if done else None)
+                extra = None
+                if done:
+                    extra = {"spec": {"passes": r.spec_passes, "drafted": r.spec_drafted,
+                                      "accepted": r.spec_accepted, "rejected": r.spec_rejected}}
+                yield sse(r.id, text, r.finish_reason if done else None, extra)
         yield "data: [DONE]\n\n"
     finally:
         if not done:                # client left early, free its slot and cache
@@ -87,6 +94,8 @@ async def completions(body: CompletionRequest):
     def on_token(token_id, done):   # runs on the engine thread; token_id None = engine error
         if token_id is not None:
             timer.token(done)
+            if done:
+                timer.finish(r)
         loop.call_soon_threadsafe(events.put_nowait, (token_id, done))
 
     stop = [body.stop] if isinstance(body.stop, str) else (body.stop or [])
