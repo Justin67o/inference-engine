@@ -1,0 +1,37 @@
+{
+  "batch": 192,
+  "k": 0,
+  "steps": 20,
+  "ms_per_step": 38.922813050157856,
+  "ms_per_step_profiled": 58.59534074988915,
+  "gpu_kernel_ms_per_step": 31.070831649999832,
+  "gpu_busy": 0.5302611308742771,
+  "kernels_per_step": 1261.0,
+  "cpu_ms_per_step": {
+    "step": 58.45161270000001,
+    "schedule": 0.1922425500000114,
+    "draft": 0.010448799999990842,
+    "forward": 51.150949099999984,
+    "sample": 0.10653315000000547
+  },
+  "env": {
+    "timestamp": "2026-11-25T20:53:04",
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "driver_version": "617.42",
+      "clocks.sm": "1402 MHz",
+      "clocks.max.sm": "2100 MHz",
+      "power.draw": "7.61 W",
+      "temperature.gpu": "46",
+      "pstate": "P5"
+    },
+    "python": "3.12.3",
+    "torch": "2.14.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.20.2",
+    "git": {
+      "commit": "96481137745df5c836e0433d9850645d84e9c9d8",
+      "dirty": true
+    }
+  }
+}
