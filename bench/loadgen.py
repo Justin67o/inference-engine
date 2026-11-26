@@ -68,16 +68,16 @@ def preemptions(url):
     return None
 
 
-async def run(url, prompts, rate_per_s, max_tokens, read_timeout=None):
+async def run(url, reqs, rate_per_s, read_timeout=None):
     results = []
     limits = httpx.Limits(max_connections=1000)
     timeout = httpx.Timeout(None, read=read_timeout)   # no limit on connect/write, only on silence
 
     async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
         tasks = []
-        for p in prompts:
+        for prompt, max_tokens in reqs:
             tasks.append(asyncio.create_task(
-                one_request(client, url, p, max_tokens, results)))
+                one_request(client, url, prompt, max_tokens, results)))
             await asyncio.sleep(random.expovariate(rate_per_s))
 
         await asyncio.gather(*tasks)
@@ -88,7 +88,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://localhost:8001/v1/completions")
     parser.add_argument("--rate", type=float, required=True, help="requests per second")
-    parser.add_argument("--max-tokens", type=int, default=128)
+    parser.add_argument("--max-tokens", type=int, default=128,
+                        help="used when the prompts file has no max_tokens")
     parser.add_argument("--prompts", default="bench/prompts/synthetic_200.jsonl")
     parser.add_argument("--num-requests", type=int, required=True, help="number of requests to send")
     parser.add_argument("--seed", type=int, default=0)
@@ -102,20 +103,20 @@ def main():
     os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
 
     with open(args.prompts, encoding="utf-8") as f:
-        all_prompts = [json.loads(line)["prompt"] for line in f]
-
-    prompts = [all_prompts[i % len(all_prompts)] for i in range(args.num_requests)]
+        rows = [json.loads(line) for line in f]
+    workload = [(r["prompt"], r.get("max_tokens", args.max_tokens)) for r in rows]
+    reqs = [workload[i % len(workload)] for i in range(args.num_requests)]
 
     server = server_info(args.url)
 
     if args.warmup > 0:
-        warm_prompts = [all_prompts[i % len(all_prompts)] for i in range(args.warmup)]
-        asyncio.run(run(args.url, warm_prompts, 100.0, args.max_tokens, args.read_timeout))
+        warm = [workload[i % len(workload)] for i in range(args.warmup)]
+        asyncio.run(run(args.url, warm, 100.0, args.read_timeout))
         print(f"warm-up: {args.warmup} done")
     random.seed(args.seed)
 
     before = preemptions(args.url)
-    results = asyncio.run(run(args.url, prompts, args.rate, args.max_tokens, args.read_timeout))
+    results = asyncio.run(run(args.url, reqs, args.rate, args.read_timeout))
     after = preemptions(args.url)
     env = get_env() # right after the run, so GPU state is still under load
     metrics = summarize(results)

@@ -32,7 +32,8 @@ def run_batch(reqs):
         out = model.generate(**enc, max_new_tokens=n, min_new_tokens=n, do_sample=False,
                              repetition_penalty=1.0, temperature=None, top_p=None, top_k=None,
                              pad_token_id=tok.pad_token_id)
-    return tok.batch_decode(out[:, enc.input_ids.shape[1]:], skip_special_tokens=True)
+    outs = out[:, enc.input_ids.shape[1]:]   # every row has n tokens: trim each to its own max_tokens
+    return [tok.decode(o[:r.max_tokens], skip_special_tokens=True) for o, r in zip(outs, reqs)]
 
 
 async def batcher():

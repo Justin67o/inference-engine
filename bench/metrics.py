@@ -44,7 +44,7 @@ def summarize(results):
     """
     if not results:
         return {"num_ok": 0, "num_errors": 0, "ttft": None, "tpot": None,
-            "e2e": None, "throughput_tok_s": None}
+            "e2e": None, "output_tokens": 0, "throughput_tok_s": None}
 
     
     ok = [r for r in results if r["ok"]]
@@ -65,5 +65,6 @@ def summarize(results):
         "ttft": percentiles(ttfts),
         "tpot": percentiles(tpots),
         "e2e": percentiles(e2es),
+        "output_tokens": tokens,
         "throughput_tok_s": throughput,
     }
