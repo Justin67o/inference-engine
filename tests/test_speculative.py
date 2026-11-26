@@ -207,7 +207,8 @@ def test_rollback_keeps_tables_exactly_the_cached_length(tiny_model):
 def test_draft_cache_shares_the_target_block_ids(tiny_model):
     cfg = EngineConfig(max_num_seqs=4, max_num_batched_tokens=64, max_model_len=64)
     e = Engine(tiny_model, cfg, num_blocks=8, draft=tiny_model)
-    assert e.draft_cache.num_blocks == e.cache.num_blocks == e.scheduler.blocks.num_blocks
+    # the target's extra last block is the CUDA graph padding target; the manager never hands it out
+    assert e.draft_cache.num_blocks == e.scheduler.blocks.num_blocks == e.cache.num_blocks - 1
     assert e.draft_cache.k is not e.cache.k                 # separate storage
 
 

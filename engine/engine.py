@@ -8,6 +8,7 @@ from transformers import AutoTokenizer, GenerationConfig
 
 from engine.cache.block_manager import BlockManager, bytes_per_block, num_blocks_for
 from engine.cache.kv_cache import Segment
+from engine.cuda_graph import GraphRunner
 from engine.model.loader import load_model
 from engine.request import State
 from engine.sampler import sample
@@ -35,7 +36,7 @@ class Engine:
         bs = 16
         if num_blocks is None:
             num_blocks = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // bs)
-        self.cache = model.new_cache(num_blocks, bs)
+        self.cache = model.new_cache(num_blocks + 1, bs)
 
         # The draft's K/V lives in its own tensors but uses the target's block ids, so one
         # BlockManager reserves, preempts, and trims both caches together
@@ -44,6 +45,10 @@ class Engine:
 
         self.scheduler = Scheduler(cfg, BlockManager(num_blocks, bs))
         self.spec_drafted = self.spec_accepted = 0
+        self.graphs = None 
+        if cfg.cuda_graphs and self.device.type == "cuda":
+            max_blocks = -(-(cfg.max_model_len + cfg.num_speculative_tokens) // bs)
+            self.graphs = GraphRunner(model, self.cache, cfg.max_num_seqs, max_blocks, num_blocks)
 
 
     @classmethod
@@ -108,8 +113,15 @@ class Engine:
                 d, q = drafts.get(r, ([], None))
                 ids += [r.output_ids[-1]] + d
                 plan.append((r, start, 1 + len(d), d, q))
-        logits = self.model(torch.tensor(ids, device=self.device),
-                            [Segment(r.block_table, s, n) for r, s, n, *_ in plan], self.cache)
+
+        segments = [Segment(r.block_table, s, n) for r, s, n, *_ in plan]
+        if (self.graphs is not None and all(s > 0 and n == 1 for _, s, n, *_ in plan)
+                and self.graphs.fits(segments)):
+            logits = self.graphs.run(ids, segments)     # decode-only, no drafts
+        else:
+            logits = self.model(torch.tensor(ids, device=self.device), segments, self.cache)
+
+            
         parts = logits.split([n if s > 0 else 1 for _, s, n, *_ in plan])
 
         out = [None] * len(plan)

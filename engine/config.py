@@ -13,6 +13,7 @@ class EngineConfig:
     num_speculative_tokens: int = 0         # prompt-lookup drafts per decode
     ngram_max: int = 3                      # longest n-gram prompt lookup tries to match
     draft_model: str = ""                   # "" is prompt lookup
+    cuda_graphs: bool = True                # replay decode-only steps from CUDA graphs
 
     def __post_init__(self):
         if self.max_num_seqs * (1 + self.num_speculative_tokens) > self.max_num_batched_tokens:
@@ -29,5 +30,6 @@ class EngineConfig:
         for f in fields(cls):
             value = os.environ.get(f"ENGINE_{f.name.upper()}")
             if value is not None:
-                overrides[f.name] = type(f.default)(value)
+                t = type(f.default)
+                overrides[f.name] = value.lower() in ("1", "true", "yes") if t is bool else t(value)
         return cls(**overrides)
