@@ -1,0 +1,2764 @@
+{
+  "config": {
+    "url": "http://localhost:8001/v1/completions",
+    "rate": 10.0,
+    "max_tokens": 128,
+    "prompts": "bench/prompts/mixed_200.jsonl",
+    "num_requests": 300,
+    "seed": 0,
+    "warmup": 20,
+    "output": "results/hf_tune/hf_b32_w20_rate10_mixed.json",
+    "label": "HF b32_w20 rate 10 mixed",
+    "read_timeout": 600
+  },
+  "server": {
+    "status": "ok",
+    "config": {
+      "engine": "hf",
+      "max_batch_size": 32,
+      "window_s": 0.02
+    }
+  },
+  "metrics": {
+    "num_ok": 300,
+    "num_errors": 0,
+    "ttft": {
+      "p50": 50.62066845999834,
+      "p95": 82.50276734669951,
+      "p99": 96.13504771158063
+    },
+    "tpot": null,
+    "e2e": {
+      "p50": 50.62066845999834,
+      "p95": 82.50276734669951,
+      "p99": 96.13504771158063
+    },
+    "output_tokens": 47404,
+    "throughput_tok_s": 375.20834905998424
+  },
+  "env": {
+    "timestamp": "2026-11-26T12:54:02",
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "driver_version": "617.42",
+      "clocks.sm": "1402 MHz",
+      "clocks.max.sm": "2100 MHz",
+      "power.draw": "22.47 W",
+      "temperature.gpu": "53",
+      "pstate": "P0"
+    },
+    "python": "3.12.3",
+    "torch": "2.14.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.20.2",
+    "git": {
+      "commit": "2fdfd6f678dc2af00dc916917c9071831cca6414",
+      "dirty": false
+    }
+  },
+  "results": [
+    {
+      "sent": 16739.779458759,
+      "token_times": [
+        16746.272221596
+      ],
+      "n": 299,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16739.966302917,
+      "token_times": [
+        16758.319496888
+      ],
+      "n": 221,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.10920389,
+      "token_times": [
+        16758.320913124
+      ],
+      "n": 69,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.16484928,
+      "token_times": [
+        16758.321066444
+      ],
+      "n": 39,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.195082455,
+      "token_times": [
+        16758.321594737
+      ],
+      "n": 94,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.267469765,
+      "token_times": [
+        16758.322048461
+      ],
+      "n": 65,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.319808161,
+      "token_times": [
+        16758.322753517
+      ],
+      "n": 242,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.474083607,
+      "token_times": [
+        16758.322937026
+      ],
+      "n": 46,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.511233733,
+      "token_times": [
+        16758.3242236
+      ],
+      "n": 83,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.576265815,
+      "token_times": [
+        16758.324488716
+      ],
+      "n": 121,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.664228677,
+      "token_times": [
+        16758.324757901
+      ],
+      "n": 372,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.905278339,
+      "token_times": [
+        16758.326303762
+      ],
+      "n": 92,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16740.976110908,
+      "token_times": [
+        16758.326555333
+      ],
+      "n": 42,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.010364227,
+      "token_times": [
+        16758.326808417
+      ],
+      "n": 220,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.152201495,
+      "token_times": [
+        16758.327108346
+      ],
+      "n": 136,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.249130052,
+      "token_times": [
+        16758.328929741
+      ],
+      "n": 38,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.279072216,
+      "token_times": [
+        16758.329262459
+      ],
+      "n": 374,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.521024763,
+      "token_times": [
+        16758.329571268
+      ],
+      "n": 482,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16741.928766064,
+      "token_times": [
+        16758.329884636
+      ],
+      "n": 265,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.095715347,
+      "token_times": [
+        16758.330208194
+      ],
+      "n": 365,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.328939698,
+      "token_times": [
+        16758.330546752
+      ],
+      "n": 47,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.367693063,
+      "token_times": [
+        16758.330894595
+      ],
+      "n": 201,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.499023629,
+      "token_times": [
+        16758.332968525
+      ],
+      "n": 361,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.729081199,
+      "token_times": [
+        16758.333366055
+      ],
+      "n": 171,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.844985898,
+      "token_times": [
+        16758.333755762
+      ],
+      "n": 82,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.910040114,
+      "token_times": [
+        16758.334172604
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.92196705,
+      "token_times": [
+        16758.334592105
+      ],
+      "n": 72,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16742.979542304,
+      "token_times": [
+        16758.335037937
+      ],
+      "n": 133,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.07457579,
+      "token_times": [
+        16758.335473552
+      ],
+      "n": 379,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.319815218,
+      "token_times": [
+        16758.335923149
+      ],
+      "n": 456,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.660530851,
+      "token_times": [
+        16758.337149613
+      ],
+      "n": 84,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.726394303,
+      "token_times": [
+        16758.337625544
+      ],
+      "n": 321,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.928235126,
+      "token_times": [
+        16758.338102261
+      ],
+      "n": 39,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16743.958762904,
+      "token_times": [
+        16769.511292353
+      ],
+      "n": 260,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.122647107,
+      "token_times": [
+        16769.513018147
+      ],
+      "n": 107,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.203364898,
+      "token_times": [
+        16769.51331091
+      ],
+      "n": 17,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.205079615,
+      "token_times": [
+        16769.514212017
+      ],
+      "n": 194,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.332735834,
+      "token_times": [
+        16769.514428406
+      ],
+      "n": 64,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.384581765,
+      "token_times": [
+        16769.515748856
+      ],
+      "n": 279,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.559849031,
+      "token_times": [
+        16769.515988561
+      ],
+      "n": 162,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.672075503,
+      "token_times": [
+        16769.516301058
+      ],
+      "n": 89,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.671426436,
+      "token_times": [
+        16769.516562121
+      ],
+      "n": 16,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.74047773,
+      "token_times": [
+        16769.518951452
+      ],
+      "n": 324,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.943523693,
+      "token_times": [
+        16769.51925093
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16744.973129596,
+      "token_times": [
+        16769.519556205
+      ],
+      "n": 49,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.012998653,
+      "token_times": [
+        16769.519877342
+      ],
+      "n": 327,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.217873228,
+      "token_times": [
+        16769.520257987
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.23946783,
+      "token_times": [
+        16769.520873846
+      ],
+      "n": 114,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.324414208,
+      "token_times": [
+        16769.523056048
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.353227244,
+      "token_times": [
+        16769.523461414
+      ],
+      "n": 458,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.696816449,
+      "token_times": [
+        16769.523875173
+      ],
+      "n": 259,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.86060781,
+      "token_times": [
+        16769.524380826
+      ],
+      "n": 76,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.920737888,
+      "token_times": [
+        16769.524831852
+      ],
+      "n": 21,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.929896167,
+      "token_times": [
+        16769.525294716
+      ],
+      "n": 49,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16745.968867379,
+      "token_times": [
+        16769.525777678
+      ],
+      "n": 93,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.040693564,
+      "token_times": [
+        16769.528588731
+      ],
+      "n": 406,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.311461546,
+      "token_times": [
+        16769.529089152
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.323576916,
+      "token_times": [
+        16769.52959577
+      ],
+      "n": 108,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.404627583,
+      "token_times": [
+        16769.530144534
+      ],
+      "n": 185,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.527518548,
+      "token_times": [
+        16769.53068236
+      ],
+      "n": 107,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.607486818,
+      "token_times": [
+        16769.531234526
+      ],
+      "n": 269,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.776583138,
+      "token_times": [
+        16769.531825007
+      ],
+      "n": 104,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16746.854727162,
+      "token_times": [
+        16769.532464399
+      ],
+      "n": 452,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.18756742,
+      "token_times": [
+        16769.533091175
+      ],
+      "n": 129,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.280687944,
+      "token_times": [
+        16769.533711115
+      ],
+      "n": 123,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.43079428,
+      "token_times": [
+        16782.125256263
+      ],
+      "n": 126,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.521849843,
+      "token_times": [
+        16782.125608456
+      ],
+      "n": 61,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.570696603,
+      "token_times": [
+        16782.127522554
+      ],
+      "n": 118,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.657512556,
+      "token_times": [
+        16782.127721443
+      ],
+      "n": 44,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.692704827,
+      "token_times": [
+        16782.127928214
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.71465339,
+      "token_times": [
+        16782.130348515
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.73628377,
+      "token_times": [
+        16782.130623761
+      ],
+      "n": 134,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.83194112,
+      "token_times": [
+        16782.130897239
+      ],
+      "n": 156,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.939198793,
+      "token_times": [
+        16782.131183128
+      ],
+      "n": 83,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.004299515,
+      "token_times": [
+        16782.131680662
+      ],
+      "n": 22,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.014322233,
+      "token_times": [
+        16782.132205254
+      ],
+      "n": 221,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.157164541,
+      "token_times": [
+        16782.132696311
+      ],
+      "n": 334,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.368422132,
+      "token_times": [
+        16782.13309873
+      ],
+      "n": 393,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.626835542,
+      "token_times": [
+        16782.136082637
+      ],
+      "n": 297,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16748.812201695,
+      "token_times": [
+        16782.136475684
+      ],
+      "n": 360,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.041439547,
+      "token_times": [
+        16782.136849643
+      ],
+      "n": 392,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.298691179,
+      "token_times": [
+        16782.137240799
+      ],
+      "n": 104,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.376933065,
+      "token_times": [
+        16782.137659004
+      ],
+      "n": 62,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.427085728,
+      "token_times": [
+        16782.138081642
+      ],
+      "n": 184,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.550632216,
+      "token_times": [
+        16782.138533789
+      ],
+      "n": 42,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.583708259,
+      "token_times": [
+        16782.139084609
+      ],
+      "n": 267,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.75176849,
+      "token_times": [
+        16782.13963494
+      ],
+      "n": 304,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16749.941950148,
+      "token_times": [
+        16782.140172901
+      ],
+      "n": 356,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.168371879,
+      "token_times": [
+        16782.141035049
+      ],
+      "n": 124,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.257836467,
+      "token_times": [
+        16782.143017198
+      ],
+      "n": 430,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.558229005,
+      "token_times": [
+        16782.143555173
+      ],
+      "n": 119,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.645942946,
+      "token_times": [
+        16782.14416126
+      ],
+      "n": 76,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.706382483,
+      "token_times": [
+        16782.144720303
+      ],
+      "n": 158,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16750.815090253,
+      "token_times": [
+        16782.14528921
+      ],
+      "n": 505,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.374616938,
+      "token_times": [
+        16782.145898752
+      ],
+      "n": 384,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.624381658,
+      "token_times": [
+        16782.146499049
+      ],
+      "n": 250,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16747.371233553,
+      "token_times": [
+        16782.146790285
+      ],
+      "n": 75,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.792595242,
+      "token_times": [
+        16793.993005457
+      ],
+      "n": 134,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.888772908,
+      "token_times": [
+        16793.993205017
+      ],
+      "n": 86,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.955692367,
+      "token_times": [
+        16793.994194534
+      ],
+      "n": 142,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.055884666,
+      "token_times": [
+        16793.994382119
+      ],
+      "n": 299,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.242948994,
+      "token_times": [
+        16793.994566978
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.272108288,
+      "token_times": [
+        16793.995482478
+      ],
+      "n": 202,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.403875101,
+      "token_times": [
+        16793.995699476
+      ],
+      "n": 24,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.416763505,
+      "token_times": [
+        16793.995925794
+      ],
+      "n": 34,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.44242536,
+      "token_times": [
+        16793.997904606
+      ],
+      "n": 251,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.601607401,
+      "token_times": [
+        16793.998245984
+      ],
+      "n": 51,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.642871423,
+      "token_times": [
+        16793.998523617
+      ],
+      "n": 271,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.813175706,
+      "token_times": [
+        16793.998803579
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.824176403,
+      "token_times": [
+        16793.999162748
+      ],
+      "n": 27,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.841021023,
+      "token_times": [
+        16793.999477403
+      ],
+      "n": 180,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.962572729,
+      "token_times": [
+        16793.999795311
+      ],
+      "n": 19,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16752.967406167,
+      "token_times": [
+        16794.000141681
+      ],
+      "n": 117,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.05323854,
+      "token_times": [
+        16794.002562671
+      ],
+      "n": 375,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.29616499,
+      "token_times": [
+        16794.002962703
+      ],
+      "n": 102,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.37328197,
+      "token_times": [
+        16794.003347923
+      ],
+      "n": 169,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.48853642,
+      "token_times": [
+        16794.003743911
+      ],
+      "n": 18,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.491292591,
+      "token_times": [
+        16794.004208009
+      ],
+      "n": 145,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.592464787,
+      "token_times": [
+        16794.004656236
+      ],
+      "n": 131,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.686945477,
+      "token_times": [
+        16794.005088065
+      ],
+      "n": 118,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.772878796,
+      "token_times": [
+        16794.005537962
+      ],
+      "n": 62,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.822886443,
+      "token_times": [
+        16794.006020184
+      ],
+      "n": 58,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16753.869842159,
+      "token_times": [
+        16794.006510506
+      ],
+      "n": 479,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.265012953,
+      "token_times": [
+        16794.008067547
+      ],
+      "n": 18,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.269009821,
+      "token_times": [
+        16794.008644278
+      ],
+      "n": 17,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.271314659,
+      "token_times": [
+        16794.009167695
+      ],
+      "n": 447,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.597174749,
+      "token_times": [
+        16794.009721344
+      ],
+      "n": 30,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.617994062,
+      "token_times": [
+        16794.010288413
+      ],
+      "n": 25,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16751.782961481,
+      "token_times": [
+        16794.010716457
+      ],
+      "n": 21,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.655580541,
+      "token_times": [
+        16805.995742307
+      ],
+      "n": 257,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.817682434,
+      "token_times": [
+        16805.995995696
+      ],
+      "n": 412,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.094731349,
+      "token_times": [
+        16805.997704272
+      ],
+      "n": 17,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.098102369,
+      "token_times": [
+        16805.997873229
+      ],
+      "n": 70,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.153415449,
+      "token_times": [
+        16805.998043219
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.164727941,
+      "token_times": [
+        16805.998224682
+      ],
+      "n": 39,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.195012992,
+      "token_times": [
+        16805.999964346
+      ],
+      "n": 34,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.220697684,
+      "token_times": [
+        16806.00025703
+      ],
+      "n": 151,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.325358046,
+      "token_times": [
+        16806.00051431
+      ],
+      "n": 54,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.369799454,
+      "token_times": [
+        16806.000770417
+      ],
+      "n": 30,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.39066154,
+      "token_times": [
+        16806.001027497
+      ],
+      "n": 92,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.461714322,
+      "token_times": [
+        16806.004491527
+      ],
+      "n": 18,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.466582608,
+      "token_times": [
+        16806.004926394
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.477406718,
+      "token_times": [
+        16806.005248827
+      ],
+      "n": 492,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.922541683,
+      "token_times": [
+        16806.005570538
+      ],
+      "n": 32,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.945297305,
+      "token_times": [
+        16806.005900076
+      ],
+      "n": 55,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16755.990496583,
+      "token_times": [
+        16806.006239496
+      ],
+      "n": 202,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16756.123164116,
+      "token_times": [
+        16806.006677617
+      ],
+      "n": 292,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16756.306573001,
+      "token_times": [
+        16806.007040746
+      ],
+      "n": 386,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16756.557861314,
+      "token_times": [
+        16806.00740211
+      ],
+      "n": 29,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16756.576901357,
+      "token_times": [
+        16806.007768207
+      ],
+      "n": 165,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16756.689767918,
+      "token_times": [
+        16806.00848038
+      ],
+      "n": 456,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.030148566,
+      "token_times": [
+        16806.011158901
+      ],
+      "n": 20,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.037030361,
+      "token_times": [
+        16806.011575247
+      ],
+      "n": 167,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.15097529,
+      "token_times": [
+        16806.012051353
+      ],
+      "n": 300,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.338494909,
+      "token_times": [
+        16806.012498723
+      ],
+      "n": 52,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.380713977,
+      "token_times": [
+        16806.012946117
+      ],
+      "n": 38,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.411460341,
+      "token_times": [
+        16806.013402863
+      ],
+      "n": 127,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.503386613,
+      "token_times": [
+        16806.013866285
+      ],
+      "n": 74,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.562900052,
+      "token_times": [
+        16806.014372917
+      ],
+      "n": 29,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.584071574,
+      "token_times": [
+        16806.014863009
+      ],
+      "n": 82,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16754.631715905,
+      "token_times": [
+        16806.015310591
+      ],
+      "n": 33,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.702023513,
+      "token_times": [
+        16816.469186435
+      ],
+      "n": 115,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.787032166,
+      "token_times": [
+        16816.469328487
+      ],
+      "n": 93,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.858782517,
+      "token_times": [
+        16816.470254462
+      ],
+      "n": 47,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.897220094,
+      "token_times": [
+        16816.470434898
+      ],
+      "n": 55,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.941994544,
+      "token_times": [
+        16816.470607943
+      ],
+      "n": 292,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.125083025,
+      "token_times": [
+        16816.472216169
+      ],
+      "n": 38,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.154585779,
+      "token_times": [
+        16816.472498395
+      ],
+      "n": 112,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.237460038,
+      "token_times": [
+        16816.472703391
+      ],
+      "n": 17,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.23897922,
+      "token_times": [
+        16816.472905172
+      ],
+      "n": 209,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.375417671,
+      "token_times": [
+        16816.473121685
+      ],
+      "n": 51,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.416995959,
+      "token_times": [
+        16816.474726034
+      ],
+      "n": 19,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.422470629,
+      "token_times": [
+        16816.47496822
+      ],
+      "n": 42,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.456047819,
+      "token_times": [
+        16816.475387306
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.485668363,
+      "token_times": [
+        16816.475665718
+      ],
+      "n": 435,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.792484316,
+      "token_times": [
+        16816.475936344
+      ],
+      "n": 54,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.836483511,
+      "token_times": [
+        16816.476289924
+      ],
+      "n": 43,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.870863889,
+      "token_times": [
+        16816.478901283
+      ],
+      "n": 56,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16758.915768537,
+      "token_times": [
+        16816.479219943
+      ],
+      "n": 426,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.210231895,
+      "token_times": [
+        16816.479535814
+      ],
+      "n": 144,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.311111321,
+      "token_times": [
+        16816.479859606
+      ],
+      "n": 138,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.408615236,
+      "token_times": [
+        16816.480237343
+      ],
+      "n": 191,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.535317614,
+      "token_times": [
+        16816.480583203
+      ],
+      "n": 61,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.585020491,
+      "token_times": [
+        16816.480968
+      ],
+      "n": 67,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.639445652,
+      "token_times": [
+        16816.481337284
+      ],
+      "n": 153,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.746307351,
+      "token_times": [
+        16816.481713878
+      ],
+      "n": 16,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.749840116,
+      "token_times": [
+        16816.482100898
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.771302381,
+      "token_times": [
+        16816.482497899
+      ],
+      "n": 51,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.812245342,
+      "token_times": [
+        16816.483853979
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.840344518,
+      "token_times": [
+        16816.484312094
+      ],
+      "n": 146,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.942891947,
+      "token_times": [
+        16816.48474452
+      ],
+      "n": 59,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16759.99164372,
+      "token_times": [
+        16816.485224438
+      ],
+      "n": 332,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16757.648649686,
+      "token_times": [
+        16816.485684374
+      ],
+      "n": 66,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.286974194,
+      "token_times": [
+        16828.168941773
+      ],
+      "n": 67,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.341206287,
+      "token_times": [
+        16828.170361704
+      ],
+      "n": 65,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.393508186,
+      "token_times": [
+        16828.170490241
+      ],
+      "n": 182,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.516327101,
+      "token_times": [
+        16828.171189001
+      ],
+      "n": 68,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.57150928,
+      "token_times": [
+        16828.171334793
+      ],
+      "n": 159,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.680950606,
+      "token_times": [
+        16828.173199042
+      ],
+      "n": 19,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.685949792,
+      "token_times": [
+        16828.173364902
+      ],
+      "n": 299,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.747299434,
+      "token_times": [
+        16828.173616911
+      ],
+      "n": 221,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.777515585,
+      "token_times": [
+        16828.173807626
+      ],
+      "n": 69,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.79545937,
+      "token_times": [
+        16828.17399485
+      ],
+      "n": 39,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.871778962,
+      "token_times": [
+        16828.174186083
+      ],
+      "n": 94,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.939626147,
+      "token_times": [
+        16828.174577448
+      ],
+      "n": 65,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.023227351,
+      "token_times": [
+        16828.175965074
+      ],
+      "n": 242,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.165018555,
+      "token_times": [
+        16828.176391642
+      ],
+      "n": 46,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.381267142,
+      "token_times": [
+        16828.176710314
+      ],
+      "n": 83,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.450738925,
+      "token_times": [
+        16828.176956576
+      ],
+      "n": 121,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.488569977,
+      "token_times": [
+        16828.177204282
+      ],
+      "n": 372,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.552333233,
+      "token_times": [
+        16828.179840414
+      ],
+      "n": 92,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.718555351,
+      "token_times": [
+        16828.180186172
+      ],
+      "n": 42,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16761.927463526,
+      "token_times": [
+        16828.180484745
+      ],
+      "n": 220,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16762.095662835,
+      "token_times": [
+        16828.180772034
+      ],
+      "n": 136,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16762.118398624,
+      "token_times": [
+        16828.181069679
+      ],
+      "n": 38,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16762.864278644,
+      "token_times": [
+        16828.181371421
+      ],
+      "n": 374,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16762.965002987,
+      "token_times": [
+        16828.18167964
+      ],
+      "n": 482,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16762.974302061,
+      "token_times": [
+        16828.18199944
+      ],
+      "n": 265,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.10439208,
+      "token_times": [
+        16828.182352359
+      ],
+      "n": 365,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.537623172,
+      "token_times": [
+        16828.182690803
+      ],
+      "n": 47,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.58966778,
+      "token_times": [
+        16828.183035445
+      ],
+      "n": 201,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.703542737,
+      "token_times": [
+        16828.183395153
+      ],
+      "n": 361,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.742968152,
+      "token_times": [
+        16828.184309142
+      ],
+      "n": 171,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.767799082,
+      "token_times": [
+        16828.184709776
+      ],
+      "n": 82,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16760.20213646,
+      "token_times": [
+        16828.18510576
+      ],
+      "n": 115,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.89573716,
+      "token_times": [
+        16839.290436489
+      ],
+      "n": 72,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.069814065,
+      "token_times": [
+        16839.290615484
+      ],
+      "n": 133,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.145826182,
+      "token_times": [
+        16839.291942155
+      ],
+      "n": 379,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.156877882,
+      "token_times": [
+        16839.292114432
+      ],
+      "n": 456,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.17064068,
+      "token_times": [
+        16839.292261602
+      ],
+      "n": 84,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.277443006,
+      "token_times": [
+        16839.29383664
+      ],
+      "n": 321,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.484602459,
+      "token_times": [
+        16839.293989802
+      ],
+      "n": 39,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.517845355,
+      "token_times": [
+        16839.294138602
+      ],
+      "n": 260,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.903019029,
+      "token_times": [
+        16839.294404167
+      ],
+      "n": 107,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16764.91387723,
+      "token_times": [
+        16839.294599874
+      ],
+      "n": 17,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.107049592,
+      "token_times": [
+        16839.294787302
+      ],
+      "n": 194,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.158391895,
+      "token_times": [
+        16839.297739927
+      ],
+      "n": 64,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.167491492,
+      "token_times": [
+        16839.297933495
+      ],
+      "n": 279,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.200073386,
+      "token_times": [
+        16839.298126371
+      ],
+      "n": 162,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.262077023,
+      "token_times": [
+        16839.298322618
+      ],
+      "n": 16,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.419770121,
+      "token_times": [
+        16839.298527276
+      ],
+      "n": 89,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.61830405,
+      "token_times": [
+        16839.298735124
+      ],
+      "n": 324,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.633004857,
+      "token_times": [
+        16839.29895167
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.708517656,
+      "token_times": [
+        16839.299174617
+      ],
+      "n": 49,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.815994194,
+      "token_times": [
+        16839.299405167
+      ],
+      "n": 327,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16765.859536935,
+      "token_times": [
+        16839.299669884
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.066016598,
+      "token_times": [
+        16839.29991759
+      ],
+      "n": 114,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.099144421,
+      "token_times": [
+        16839.300411673
+      ],
+      "n": 37,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.101739217,
+      "token_times": [
+        16839.303757998
+      ],
+      "n": 458,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.106428743,
+      "token_times": [
+        16839.304107018
+      ],
+      "n": 259,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.22188198,
+      "token_times": [
+        16839.304413095
+      ],
+      "n": 76,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.304290292,
+      "token_times": [
+        16839.304718165
+      ],
+      "n": 21,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.598296169,
+      "token_times": [
+        16839.305129757
+      ],
+      "n": 49,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16766.877827135,
+      "token_times": [
+        16839.305479865
+      ],
+      "n": 93,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.120128026,
+      "token_times": [
+        16839.305794451
+      ],
+      "n": 406,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.12537048,
+      "token_times": [
+        16839.306109005
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16763.894875453,
+      "token_times": [
+        16839.306593072
+      ],
+      "n": 23,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.386821754,
+      "token_times": [
+        16850.344363709
+      ],
+      "n": 185,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.494393431,
+      "token_times": [
+        16850.344507348
+      ],
+      "n": 107,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.620369213,
+      "token_times": [
+        16850.345193202
+      ],
+      "n": 269,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.854220946,
+      "token_times": [
+        16850.345301101
+      ],
+      "n": 104,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.957397032,
+      "token_times": [
+        16850.346773775
+      ],
+      "n": 452,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.004269633,
+      "token_times": [
+        16850.34690415
+      ],
+      "n": 129,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.082263814,
+      "token_times": [
+        16850.34702322
+      ],
+      "n": 123,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.106699131,
+      "token_times": [
+        16850.347142262
+      ],
+      "n": 75,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.19682561,
+      "token_times": [
+        16850.347264748
+      ],
+      "n": 126,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.198188407,
+      "token_times": [
+        16850.348606328
+      ],
+      "n": 61,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.215459798,
+      "token_times": [
+        16850.348748294
+      ],
+      "n": 118,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.256322225,
+      "token_times": [
+        16850.348891275
+      ],
+      "n": 44,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.412521766,
+      "token_times": [
+        16850.349038293
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.539547582,
+      "token_times": [
+        16850.34919201
+      ],
+      "n": 31,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.581511969,
+      "token_times": [
+        16850.351248427
+      ],
+      "n": 134,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.679533003,
+      "token_times": [
+        16850.351424566
+      ],
+      "n": 156,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.684732453,
+      "token_times": [
+        16850.351617463
+      ],
+      "n": 83,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16768.703602878,
+      "token_times": [
+        16850.351806956
+      ],
+      "n": 22,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.105587699,
+      "token_times": [
+        16850.352039303
+      ],
+      "n": 221,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.140631649,
+      "token_times": [
+        16850.352239222
+      ],
+      "n": 334,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.19183971,
+      "token_times": [
+        16850.352436257
+      ],
+      "n": 393,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.271534819,
+      "token_times": [
+        16850.352641452
+      ],
+      "n": 297,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.306707878,
+      "token_times": [
+        16850.352851146
+      ],
+      "n": 360,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.372288576,
+      "token_times": [
+        16850.35481604
+      ],
+      "n": 392,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.401776978,
+      "token_times": [
+        16850.355047475
+      ],
+      "n": 104,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.407488757,
+      "token_times": [
+        16850.355277853
+      ],
+      "n": 62,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.428384836,
+      "token_times": [
+        16850.355512077
+      ],
+      "n": 184,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.504290549,
+      "token_times": [
+        16850.355783926
+      ],
+      "n": 42,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.516563994,
+      "token_times": [
+        16850.356066569
+      ],
+      "n": 267,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.56799275,
+      "token_times": [
+        16850.356328307
+      ],
+      "n": 304,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.608520327,
+      "token_times": [
+        16850.356588179
+      ],
+      "n": 356,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16767.264207499,
+      "token_times": [
+        16850.357087111
+      ],
+      "n": 108,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.674869326,
+      "token_times": [
+        16866.113833646
+      ],
+      "n": 430,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.916563545,
+      "token_times": [
+        16866.113919637
+      ],
+      "n": 119,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.981278989,
+      "token_times": [
+        16866.115697323
+      ],
+      "n": 76,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.166194051,
+      "token_times": [
+        16866.115920797
+      ],
+      "n": 158,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.541295235,
+      "token_times": [
+        16866.118602206
+      ],
+      "n": 505,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.584127779,
+      "token_times": [
+        16866.11870744
+      ],
+      "n": 384,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.649990028,
+      "token_times": [
+        16866.118810789
+      ],
+      "n": 250,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.771900071,
+      "token_times": [
+        16866.118915371
+      ],
+      "n": 21,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.828603597,
+      "token_times": [
+        16866.11902382
+      ],
+      "n": 134,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16770.865623312,
+      "token_times": [
+        16866.119432688
+      ],
+      "n": 86,
+      "ok": true,
+      "spec": null
+    },
+    {
+      "sent": 16769.663080318,
+      "token_times": [
+        16866.119930976
+      ],
+      "n": 124,
+      "ok": true,
+      "spec": null
+    }
+  ],
+  "engine_stats": {
+    "preemptions": null
+  }
+}
