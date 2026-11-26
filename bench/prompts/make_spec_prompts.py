@@ -36,14 +36,14 @@ CODE_TASKS = ["Add type hints and a docstring to this function:",
               "Rewrite this function with clearer variable names:"]
 
 def summ_passages(path, n, words=300):
-    text = open(path, encoding="utf-8").read()
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
     text = text[text.find("It is a truth universally acknowledged"):].split()
     return [" ".join(text[i * words:(i + 1) * words]) for i in range(n)]
 
 def write(name, prompts):
     with open(f"bench/prompts/spec_{name}.jsonl", "w", encoding="utf-8") as f:
-        for i, p in enumerate(prompts):
-            f.write(json.dumps({"id": i, "prompt": p}) + "\n")
+        f.writelines(json.dumps({"id": i, "prompt": p}) + "\n" for i, p in enumerate(prompts))
 
 if __name__ == "__main__":
     write("chat", CHAT)

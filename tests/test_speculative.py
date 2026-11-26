@@ -1,10 +1,9 @@
 import copy
 import gc
+from collections import Counter
 
 import pytest
 import torch
-
-from collections import Counter
 from scipy.stats import chi2_contingency
 
 from engine.cache.kv_cache import Segment, fresh

@@ -2,9 +2,15 @@
     python -m bench.spec_sweep --sweep k     --output results/m5/k_sweep.json
     python -m bench.spec_sweep --sweep batch --output results/m5/batch_sweep.json
 """
-import argparse, gc, json, os, time
+import argparse
+import gc
+import json
+import os
+import time
+
 import torch
 from transformers import AutoTokenizer, GenerationConfig
+
 from bench.env import get_env
 from engine.config import EngineConfig
 from engine.engine import Engine
