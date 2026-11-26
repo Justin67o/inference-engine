@@ -78,4 +78,30 @@ def test_engine_with_graphs_matches_eager(gpu_tiny, n):
     graphed, runner = run(True)
     assert runner.replays > 0
     assert graphed == eager
-    
+
+
+@cuda
+def test_a_step_with_a_prefill_runs_eager(gpu_tiny):
+    """A request joining mid-run puts its prefill beside two decodes in one step. That step and
+    the first prefill run eager, every other step replays, and tokens still match eager"""
+    g = torch.Generator().manual_seed(7)
+    prompts = [torch.randint(1000, (n,), generator=g).tolist() for n in (5, 12, 9)]
+
+    def run(graphs):
+        e = Engine(gpu_tiny, EngineConfig(max_num_seqs=8, max_num_batched_tokens=256,
+                                          max_model_len=64, cuda_graphs=graphs))
+        reqs = [Request(i, p, max_tokens=20, ignore_eos=True) for i, p in enumerate(prompts)]
+        e.add_request(reqs[0])
+        e.add_request(reqs[1])
+        for _ in range(5):                  # one prefill step, then four decode-only
+            e.step()
+        e.add_request(reqs[2])              # next step: a prefill and two decodes
+        steps = 5
+        while e.step():
+            steps += 1
+        return [r.output_ids for r in reqs], e.graphs, steps
+
+    eager, _, _ = run(False)
+    graphed, runner, steps = run(True)
+    assert graphed == eager
+    assert runner.replays == steps - 2      # only the two steps with a prefill ran eager

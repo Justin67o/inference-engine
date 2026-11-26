@@ -71,7 +71,12 @@ class Engine:
         block_bytes = sum(bytes_per_block(m.cfg, m.layers[0].self_attn.d,
                                             m.embed_tokens.weight.element_size()) for m in models)
         free, _ = torch.cuda.mem_get_info()
-        fit = num_blocks_for(free, ACTIVATION_BYTES, block_bytes)
+        
+        reserve = ACTIVATION_BYTES
+        if cfg.cuda_graphs:     # each bucket keeps its own logits; buckets sum to under 2 * max_num_seqs rows
+            reserve += 2 * cfg.max_num_seqs * mcfg.vocab_size * model.embed_tokens.weight.element_size()
+        fit = num_blocks_for(free, reserve, block_bytes)
+
         want = cfg.num_blocks or cfg.max_num_seqs * -(-cfg.max_model_len // 16)
         num_blocks = min(want, fit)
         print(f"KV pool: {num_blocks} blocks ({num_blocks * block_bytes / 2**20:.0f} MiB)")
@@ -121,7 +126,7 @@ class Engine:
         else:
             logits = self.model(torch.tensor(ids, device=self.device), segments, self.cache)
 
-            
+
         parts = logits.split([n if s > 0 else 1 for _, s, n, *_ in plan])
 
         out = [None] * len(plan)
