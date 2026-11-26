@@ -1,0 +1,119 @@
+{
+  "config": {
+    "sweep": "cost",
+    "max_tokens": 128,
+    "output": "results/m5/cost.json"
+  },
+  "rows": [
+    {
+      "k": 0,
+      "batch": 1,
+      "temperature": 0.0,
+      "tokens": 512,
+      "seconds": 15.017459173999669,
+      "tok_s": 34.09365020192272,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "target",
+      "prompts": "chat"
+    },
+    {
+      "k": 0,
+      "batch": 1,
+      "temperature": 0.0,
+      "tokens": 512,
+      "seconds": 12.037586580001516,
+      "tok_s": 42.53344277918668,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "draft_as_target",
+      "prompts": "chat"
+    },
+    {
+      "k": 0,
+      "batch": 4,
+      "temperature": 0.0,
+      "tokens": 1982,
+      "seconds": 15.820703014003811,
+      "tok_s": 125.27888288185538,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "target",
+      "prompts": "chat"
+    },
+    {
+      "k": 0,
+      "batch": 4,
+      "temperature": 0.0,
+      "tokens": 2048,
+      "seconds": 11.981664505998197,
+      "tok_s": 170.92783719446837,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "draft_as_target",
+      "prompts": "chat"
+    },
+    {
+      "k": 0,
+      "batch": 16,
+      "temperature": 0.0,
+      "tokens": 7904,
+      "seconds": 16.564889212000708,
+      "tok_s": 477.1538100160559,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "target",
+      "prompts": "chat"
+    },
+    {
+      "k": 0,
+      "batch": 16,
+      "temperature": 0.0,
+      "tokens": 8181,
+      "seconds": 12.427393829995708,
+      "tok_s": 658.3037531371793,
+      "steps": 512,
+      "passes": 0,
+      "drafted": 0,
+      "accepted": 0,
+      "rejected": 0,
+      "drafter": "draft_as_target",
+      "prompts": "chat"
+    }
+  ],
+  "env": {
+    "timestamp": "2026-11-25T18:52:53",
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "driver_version": "617.42",
+      "clocks.sm": "1972 MHz",
+      "clocks.max.sm": "2100 MHz",
+      "power.draw": "38.30 W",
+      "temperature.gpu": "59",
+      "pstate": "P0"
+    },
+    "python": "3.12.3",
+    "torch": "2.14.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.20.2",
+    "git": {
+      "commit": "8ae968d5942a1c30df19a5ad7db56ef0d6199f89",
+      "dirty": true
+    }
+  }
+}
