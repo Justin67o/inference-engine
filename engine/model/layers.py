@@ -61,7 +61,10 @@ class Attention(nn.Module):
         if batch is not None:       # decodes
             rows, tables, lens, M = batch
             decode = paged_decode_attention if x.is_cuda and paged_decode_attention else decode_attention
-            out[rows] = decode(q[rows], cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
+            if rows is None:        # decode-only step (CUDA graph): every row is a decode
+                out = decode(q, cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
+            else:
+                out[rows] = decode(q[rows], cache.k[layer], cache.v[layer], tables, lens, M, cache.bs)
 
         for row, n, slots, pos in chunks:   # verify: causal over the cache, which already holds these n
             out[row:row + n] = attend(q[row:row + n], cache.k[layer][slots], cache.v[layer][slots], pos)
