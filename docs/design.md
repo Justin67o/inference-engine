@@ -1,6 +1,6 @@
 # Design
 
-This document explains how the engine is built, the main decisions and the alternatives to each, what did not work, and where the engine stands against Hugging Face Transformers and vLLM. Every number comes from the lab notebook ([notebook.md](notebook.md)) or from `results/`. Unless a number says otherwise, it was measured on an RTX 3050 6 GB Laptop GPU under WSL2 with the clock locked at 1402 MHz, serving Qwen2.5-0.5B-Instruct in bf16.
+This document explains how the engine is built, the main decisions and the alternatives to each, what did not work, and where the engine stands against Hugging Face Transformers and vLLM. Benchmark numbers come from the result files in [results/](../results/), each of which records its commit and GPU state; the rest come from my lab notes, cited by commit hash where one applies. Unless a number says otherwise, it was measured on an RTX 3050 6 GB Laptop GPU under WSL2 with the clock locked at 1402 MHz, serving Qwen2.5-0.5B-Instruct in bf16.
 
 ## 1. Architecture
 

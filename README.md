@@ -57,7 +57,7 @@ flowchart LR
 
 **In 60 seconds.** The HTTP server never touches the GPU. It validates each request, puts it on a queue, and streams tokens back as server-sent events. One engine thread owns the GPU and runs a loop. At every step the scheduler picks which sequences run: all running decodes first, one token each, then as many waiting prompts as fit in a 2,048-token budget. The model then runs one forward pass over that mixed batch, and the sampler picks each sequence's next token. Finished sequences leave at once and waiting ones take their place, which is continuous batching. Each sequence's keys and values live in 16-token blocks of a shared pool, found through a block table, so memory grows only as a sequence grows. When the pool runs out, the newest sequence is preempted and later recomputed. Decode attention is a Triton kernel that reads the paged blocks directly. Decode-only steps replay a captured CUDA graph instead of launching hundreds of kernels. Optionally, prompt lookup or a draft model proposes several tokens, and the target model checks them all in one pass, accepting the matching prefix (greedy) or applying the rejection rule that keeps sampling exact.
 
-Everything below the tokenizer and the weight files is written from scratch: the transformer forward pass, the paged KV cache and block manager, the attention kernel, the scheduler, the sampler, speculative decoding and the streaming server. Every stage is tested against Hugging Face outputs. [docs/design.md](docs/design.md) covers each design decision and its alternative, what didn't work, and the limitations. [docs/notebook.md](docs/notebook.md) is the lab notebook behind every number.
+Everything below the tokenizer and the weight files is written from scratch: the transformer forward pass, the paged KV cache and block manager, the attention kernel, the scheduler, the sampler, speculative decoding and the streaming server. Every stage is tested against Hugging Face outputs. [docs/design.md](docs/design.md) covers each design decision and its alternative, what didn't work, and the limitations. Raw results for every number, with the commit and GPU state they were measured at, are in [results/](results/).
 
 ## Reproduce
 
@@ -117,7 +117,7 @@ server/      FastAPI app with SSE streaming and Prometheus metrics
 bench/       load generator, workloads, baselines, run_all.sh, reports
 tests/       correctness and unit tests
 results/     raw benchmark results with environment info and server logs
-docs/        design document, lab notebook, figures
+docs/        design document and figures
 ```
 
 ## References
