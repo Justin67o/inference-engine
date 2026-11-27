@@ -4,7 +4,7 @@ A single-GPU LLM inference engine written from scratch in PyTorch and Triton, wi
 
 ## Results
 
-**Serving mixed-length requests at 14 req/s, the engine delivers 3.0× the throughput of a tuned Hugging Face Transformers server at 27× lower median latency, and 95% of vLLM's throughput.**
+**Serving mixed-length requests at 14 req/s, the engine delivers 3.0× the throughput of a tuned Hugging Face Transformers server at 27× lower median latency. vLLM, the reference ceiling, has 1.6× the engine's peak throughput and 1.8× lower median latency at that rate.**
 
 All three systems served Qwen2.5-0.5B-Instruct (bf16) on the same RTX 3050 6 GB Laptop GPU, with its clock locked at 1402 MHz. They got the same 200-token prompts and the same output lengths. In the mixed workload each request's `max_tokens` is drawn from 16 to 505 tokens (mean 158) with a fixed seed. Each figure is the mean of 3 runs from one session; there were 0 errors in 132 runs.
 
@@ -21,7 +21,7 @@ All three systems served Qwen2.5-0.5B-Instruct (bf16) on the same RTX 3050 6 GB 
 
 - **Mixed lengths are where continuous batching pays.** A static batch runs until its longest request finishes, so short requests hold their slots idle and new arrivals queue behind the whole batch. Hugging Face saturates near 4 req/s on this workload. The engine admits a new request into a slot the moment one frees up, and keeps up with the offered load to about 14 req/s.
 - **The fixed-length burst is static batching's best case,** and there the engine leads by only 19%. 300 identical requests that arrive together and all stop at 128 tokens form one full batch with no padding and no early finishers. Hugging Face's batch cap was tuned to 300 by a sweep; at its old cap of 16, the engine looked 5× faster.
-- **vLLM stays ahead.** Under steady traffic the gap is 4–9% in throughput, but vLLM's tokens come 1.3–1.9× faster, and on bursts it is 1.6× faster. [docs/design.md](docs/design.md#6-limitations-and-the-gap-to-vllm) explains why.
+- **vLLM stays well ahead.** Its peak throughput, measured on the bursts, is 1.6× the engine's (the engine reaches 61–63% of it). Up to 14 req/s both systems keep up with the offered load, so their throughput there is similar, but vLLM's tokens come 1.3–1.9× faster and its median request finishes 1.3–1.8× sooner. [docs/design.md](docs/design.md#6-limitations-and-the-gap-to-vllm) explains why.
 
 ![Throughput, time to first token and end-to-end latency against request rate, for fixed and mixed lengths](docs/figures/latency_vs_rate.png)
 

@@ -153,9 +153,10 @@ The ablation ([ablation.png](figures/ablation.png)) shows where the burst throug
 
 **How far from vLLM.** vLLM 0.34.0 ran with the same model, prompts, lengths and clock, at `--gpu-memory-utilization 0.8`, with its FlashInfer kernels installed.
 
-- **Under steady traffic the engine is close on throughput:** 95% of vLLM's at 14 req/s with mixed lengths (1,777 vs 1,861 tok/s), and 93% past saturation at 24 req/s (2,370 vs 2,549). Below saturation both serve the whole offered load.
+- **Peak throughput: the engine reaches 61–63% of vLLM's.** On the bursts, where both systems run flat out, vLLM does 4,156 vs 2,549 tok/s with fixed lengths and 3,570 vs 2,245 with mixed lengths.
+- **Under steady traffic, throughput doesn't separate them until the engine saturates.** At 14 req/s with mixed lengths both serve nearly the whole offered load (1,777 vs 1,861 tok/s), so that comparison measures keeping up, not speed. At 24 req/s (about 3,800 tok/s offered, more than either system's mixed-burst capacity) both are saturated, but each 40-second run includes draining the queue after arrivals stop, so 2,370 vs 2,549 reads below both capacities. The bursts are the cleaner capacity measure.
 - **vLLM is faster per token everywhere.** TPOT p50 is 13.5 vs 25.6 ms at mixed 14 req/s, and 8.0 vs 10.3 ms at 1 req/s, so vLLM's median request finishes 1.3–1.8× sooner.
-- **On bursts vLLM is 1.6× faster:** 4,156 vs 2,549 tok/s fixed, 3,570 vs 2,245 mixed. Most of that is admission. vLLM's burst TTFT p50 was 0.20 s against the engine's 3.0 s: the engine caps the running batch at 192 sequences, so the burst runs in two waves, and the second wave runs at a partly empty batch.
+- **Most of the burst gap is admission.** vLLM's burst TTFT p50 was 0.20 s against the engine's 3.0 s: the engine caps the running batch at 192 sequences, so the burst runs in two waves, and the second wave runs at a partly empty batch.
 
 **What vLLM has that this engine doesn't,** going by vLLM's own startup log and the features listed here:
 
